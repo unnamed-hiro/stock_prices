@@ -142,3 +142,59 @@ streamlit run app/dashboard.py
 ```bash
 pytest tests/
 ```
+
+## 動作確認 (このリポジトリを試したい方へ)
+
+ダッシュボードを実際にブラウザで確認する手順です。
+
+### A. ローカルPCで動かす (推奨)
+
+```bash
+# 1. ブランチを取得
+git clone https://github.com/unnamed-hiro/stock_prices.git
+cd stock_prices
+git checkout claude/stock-trading-ai-sim-os7Ax
+
+# 2. 依存をインストール
+pip install -r requirements.txt
+
+# 3a. ネットワーク不要のサンプル結果で動作確認
+python scripts/generate_sample_results.py
+
+# 3b. または実データでバックテスト (yfinanceで取得)
+python scripts/run_backtest.py --limit 20
+
+# 4. ダッシュボード起動 → ブラウザで自動的に開く
+streamlit run app/dashboard.py
+```
+
+`http://localhost:8501` でダッシュボードが見えます。サイドバーから `results/` 配下の
+複数の結果ファイルを切り替えられます。
+
+### B. コードだけGitHub上で確認
+
+- PR: https://github.com/unnamed-hiro/stock_prices/pull/1
+- "Files changed" タブで全変更を確認できます
+
+### C. Streamlit Community Cloud で無料デプロイ
+
+URLを誰かと共有したい場合の選択肢です。
+
+1. https://share.streamlit.io にGitHubアカウントでログイン
+2. リポジトリ `unnamed-hiro/stock_prices` を選択
+3. メインファイルに `app/dashboard.py` を指定
+4. 公開URLが発行されます
+
+### 動作確認用のテストデータ
+
+`scripts/generate_sample_results.py` で複数パターンのダミー結果を生成できます。
+
+```bash
+# デフォルト: 中程度の成績 (一部基準クリア)
+python scripts/generate_sample_results.py
+
+# 全パターン生成 (好成績/不振/平均) — 比較表示の確認に
+python scripts/generate_sample_results.py --all
+```
+
+ダッシュボード起動後、サイドバーから複数の結果を切り替えて比較できます。
