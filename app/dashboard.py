@@ -1,13 +1,17 @@
-"""バックテスト結果ダッシュボード
+"""バックテスト結果ダッシュボード + 操作パネル
 
 起動: streamlit run app/dashboard.py
 """
 import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+import yaml
 
 
 RESULTS_DIR = Path("results")
@@ -15,6 +19,8 @@ DAILY_DIR = Path("results/daily")
 REALTIME_DIR = Path("results/realtime")
 STATE_PATH = Path("data/state/portfolio.json")
 REALTIME_STATE_PATH = Path("data/state/realtime_portfolio.json")
+CONFIG_PATH = Path("config.yaml")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def list_runs() -> list[Path]:
@@ -346,23 +352,274 @@ def render_realtime_state():
                          use_container_width=True, hide_index=True)
 
 
-def main():
-    st.set_page_config(page_title="株式売買シミュレーション結果", layout="wide")
-    st.title("株式売買シミュレーション ダッシュボード")
+def run_subprocess_streaming(cmd: list[str], label: str = "実行中"):
+    """Pythonスクリプトをサブプロセスで起動し、出力をリアルタイム表示。"""
+    placeholder = st.empty()
+    log_lines: list[str] = []
+    st.caption(f"実行コマンド: `{' '.join(cmd)}`")
+    try:
+        proc = subprocess.Popen(
+            cmd, cwd=str(PROJECT_ROOT),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace", bufsize=1,
+        )
+    except FileNotFoundError as e:
+        st.error(f"起動失敗: {e}")
+        return False
+    with st.spinner(label):
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            log_lines.append(line.rstrip())
+            placeholder.code("\n".join(log_lines[-50:]), language=None)
+        proc.wait()
+    if proc.returncode == 0:
+        st.success(f"完了 (exit=0)")
+        return True
+    st.error(f"異常終了 (exit={proc.returncode})")
+    return False
 
-    runs = list_runs()
-    live_exists = STATE_PATH.exists()
 
-    if not runs and not live_exists:
-        st.error("`results/` に結果ファイルがありません。\n\n"
-                 "先に `python scripts/run_backtest.py` か "
-                 "`python scripts/run_live.py` を実行してください。")
+def render_run_backtest():
+    st.subheader("バックテスト実行")
+    st.caption("過去データで戦略を検証します。終了後、サイドバーで結果を選んで確認できます。")
+    c1, c2, c3 = st.columns(3)
+    strategy = c1.selectbox("戦略", ["technical", "ml", "llm"],
+                            help="llm は ANTHROPIC_API_KEY 必須")
+    limit_choice = c2.selectbox("銘柄数",
+                                ["10 (動作確認・1分)", "20", "50",
+                                 "100", "全銘柄 (5〜15分)"],
+                                index=0)
+    limit_map = {"10 (動作確認・1分)": 10, "20": 20, "50": 50,
+                 "100": 100, "全銘柄 (5〜15分)": None}
+    limit = limit_map[limit_choice]
+    use_cache = c3.checkbox("キャッシュ利用", value=True,
+                            help="チェックを外すとyfinanceから再取得")
+    if st.button("バックテスト開始", type="primary", use_container_width=True):
+        cmd = [sys.executable, "scripts/run_backtest.py", "--strategy", strategy]
+        if limit is not None:
+            cmd += ["--limit", str(limit)]
+        if not use_cache:
+            cmd.append("--no-cache")
+        run_subprocess_streaming(cmd, "バックテスト実行中...")
+        st.info("結果ファイルが results/ に保存されました。サイドバーから選択してください。")
+
+
+def render_run_live():
+    st.subheader("AI日次判断 (1日分)")
+    st.caption("当日(または指定日)の終値をもとに、AIに売買判断をさせて仮想口座を更新します。")
+    c1, c2 = st.columns(2)
+    strategy = c1.selectbox("戦略", ["technical", "ml", "llm"], key="live_strat")
+    date = c2.date_input("判断日", value=pd.Timestamp.today().date(),
+                         help="休場日でも直近営業日のデータで動く")
+    c3, c4 = st.columns(2)
+    dry = c3.checkbox("dry-run (判断のみ、口座変更なし)", value=False)
+    limit = c4.number_input("銘柄数 (0=config値)", value=0, min_value=0,
+                            max_value=500, step=10)
+
+    cc1, cc2 = st.columns([3, 1])
+    if cc1.button("AI判断を実行", type="primary", use_container_width=True,
+                  key="run_live_btn"):
+        cmd = [sys.executable, "scripts/run_live.py",
+               "--strategy", strategy, "--date", str(date)]
+        if dry:
+            cmd.append("--dry-run")
+        if limit > 0:
+            cmd += ["--limit", str(limit)]
+        run_subprocess_streaming(cmd, "AI判断実行中...")
+    if cc2.button("口座をリセット", use_container_width=True, key="live_reset"):
+        run_subprocess_streaming([sys.executable, "scripts/run_live.py", "--reset"],
+                                  "リセット中...")
+
+
+def render_run_realtime():
+    st.subheader("準リアルタイム AI 売買")
+    st.caption("yfinance 1分足を取得 → AI判断 → 仮想売買。約15分遅延あり。")
+    c1, c2, c3 = st.columns(3)
+    dry = c1.checkbox("dry-run", value=False, key="rt_dry")
+    force = c2.checkbox("force-run (営業時間外も実行)", value=True, key="rt_force")
+    auto = c3.checkbox("30秒ごと自動実行", value=False, key="rt_auto",
+                       help="チェックすると30秒ごとに1ティック実行を繰り返す")
+
+    cc1, cc2 = st.columns([3, 1])
+    if cc1.button("1ティック実行", type="primary",
+                  use_container_width=True, key="rt_once"):
+        cmd = [sys.executable, "scripts/run_realtime.py",
+               "--once", "--interval", "1"]
+        if dry:
+            cmd.append("--dry-run")
+        if force:
+            cmd.append("--force-run")
+        run_subprocess_streaming(cmd, "1ティック実行中...")
+        st.rerun()
+    if cc2.button("口座リセット", use_container_width=True, key="rt_reset"):
+        run_subprocess_streaming(
+            [sys.executable, "scripts/run_realtime.py", "--reset"], "リセット中...")
+        st.rerun()
+
+    st.markdown("---")
+    render_realtime_state_compact()
+
+    if auto:
+        time.sleep(30)
+        st.rerun()
+
+
+def render_realtime_state_compact():
+    """リアルタイム状態の簡易表示 (render_realtime_state より軽量)"""
+    if not REALTIME_STATE_PATH.exists():
+        st.info("まだ1度も実行されていません。「1ティック実行」を押してください。")
+        return
+    state = json.loads(REALTIME_STATE_PATH.read_text(encoding="utf-8"))
+
+    snapshots: list[Path] = []
+    if REALTIME_DIR.exists():
+        for d in sorted(REALTIME_DIR.iterdir()):
+            if d.is_dir():
+                snapshots.extend(sorted(d.glob("*.json")))
+    latest_eq = state["cash"]
+    if snapshots:
+        latest = json.loads(snapshots[-1].read_text(encoding="utf-8"))
+        latest_eq = latest["equity"]
+
+    initial = state["initial_capital"]
+    pnl_pct = (latest_eq - initial) / initial * 100
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("最新評価額", f"{latest_eq:,.0f}円", f"{pnl_pct:+.2f}%")
+    c2.metric("現金残", f"{state['cash']:,.0f}円")
+    c3.metric("保有銘柄数", len(state["positions"]))
+    c4.metric("総取引数", len(state["trades"]))
+
+    if state["positions"]:
+        st.markdown("**現在の保有ポジション**")
+        rows = [{"銘柄": t, "株数": p["shares"], "取得単価": p["entry_price"],
+                 "取得日時": p["entry_date"][:19]}
+                for t, p in state["positions"].items()]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    if snapshots:
+        eq_rows = []
+        for s in snapshots:
+            d = json.loads(s.read_text(encoding="utf-8"))
+            eq_rows.append({"timestamp": d["timestamp"], "equity": d["equity"]})
+        eq_df = pd.DataFrame(eq_rows)
+        eq_df["timestamp"] = pd.to_datetime(eq_df["timestamp"])
+        fig = px.line(eq_df, x="timestamp", y="equity", title="評価額推移")
+        fig.add_hline(y=initial, line_dash="dash", line_color="gray")
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def render_settings():
+    st.subheader("設定 (config.yaml)")
+    st.caption("初期資金、リスク設定、監視銘柄リスト等を直接編集できます。"
+               "変更後「保存」を押すと次回実行から反映されます。")
+
+    if not CONFIG_PATH.exists():
+        st.error(f"{CONFIG_PATH} が見つかりません")
         return
 
-    mode = st.sidebar.radio("表示モード",
-                            ["バックテスト結果", "AIライブ運用 (日次)",
-                             "準リアルタイム"],
-                            index=0 if runs else 1)
+    current_text = CONFIG_PATH.read_text(encoding="utf-8")
+    edited = st.text_area("config.yaml", value=current_text, height=500,
+                          key="config_editor")
+
+    c1, c2, c3 = st.columns([1, 1, 4])
+    if c1.button("保存", type="primary", key="save_cfg"):
+        try:
+            yaml.safe_load(edited)  # 構文チェック
+        except yaml.YAMLError as e:
+            st.error(f"YAML構文エラー: {e}")
+            return
+        backup = CONFIG_PATH.with_suffix(".yaml.bak")
+        backup.write_text(current_text, encoding="utf-8")
+        CONFIG_PATH.write_text(edited, encoding="utf-8")
+        st.success(f"保存しました (バックアップ: {backup.name})")
+    if c2.button("元に戻す", key="reset_cfg"):
+        st.rerun()
+
+
+def render_logs_browser():
+    st.subheader("生ログ閲覧")
+    st.caption("results/ 配下のJSONログを直接閲覧できます。")
+    log_kind = st.radio("ログ種別",
+                        ["日次レポート (results/daily/)",
+                         "リアルタイム・スナップショット (results/realtime/)",
+                         "バックテスト結果 (results/*.json)"],
+                        horizontal=True)
+    if log_kind.startswith("日次"):
+        files = list_daily_logs()
+    elif log_kind.startswith("リアルタイム"):
+        files = []
+        if REALTIME_DIR.exists():
+            for d in sorted(REALTIME_DIR.iterdir()):
+                if d.is_dir():
+                    files.extend(sorted(d.glob("*.json")))
+    else:
+        files = list_runs()
+
+    if not files:
+        st.info("まだログがありません")
+        return
+
+    selected = st.selectbox(
+        "ファイル選択",
+        files,
+        format_func=lambda p: f"{p.relative_to(PROJECT_ROOT)} "
+                              f"({pd.Timestamp(p.stat().st_mtime, unit='s').strftime('%m-%d %H:%M')})",
+    )
+    data = json.loads(Path(selected).read_text(encoding="utf-8"))
+    st.json(data, expanded=False)
+
+
+def main():
+    st.set_page_config(page_title="株式売買シミュレーション", layout="wide",
+                       initial_sidebar_state="expanded")
+    st.title("株式売買シミュレーション")
+    st.caption("📊 結果閲覧 + ▶️ 操作パネル を1つのWebUIに統合 / "
+               "コマンドプロンプト不要")
+
+    main_tabs = st.tabs([
+        "📊 結果ダッシュボード",
+        "▶️ バックテスト実行",
+        "🤖 AI日次判断",
+        "⏱️ 準リアルタイム",
+        "📁 生ログ",
+        "⚙️ 設定編集",
+    ])
+
+    with main_tabs[0]:
+        render_results_dashboard()
+    with main_tabs[1]:
+        render_run_backtest()
+    with main_tabs[2]:
+        render_run_live()
+    with main_tabs[3]:
+        render_run_realtime()
+    with main_tabs[4]:
+        render_logs_browser()
+    with main_tabs[5]:
+        render_settings()
+
+
+def render_results_dashboard():
+    """既存の結果閲覧UI"""
+    runs = list_runs()
+    live_exists = STATE_PATH.exists()
+    rt_exists = REALTIME_STATE_PATH.exists()
+
+    if not runs and not live_exists and not rt_exists:
+        st.info("まだ結果がありません。\n\n"
+                "**「▶️ バックテスト実行」** タブからバックテストを実行するか、\n"
+                "**「🤖 AI日次判断」** タブから1日分のAI判断を実行してください。")
+        return
+
+    options = []
+    if runs:
+        options.append("バックテスト結果")
+    if live_exists:
+        options.append("AIライブ運用 (日次)")
+    if rt_exists:
+        options.append("準リアルタイム")
+
+    mode = st.sidebar.radio("表示モード", options, index=0)
 
     if mode == "AIライブ運用 (日次)":
         render_live_state()
@@ -379,9 +636,6 @@ def main():
             runs,
             format_func=lambda p: f"{p.name} ({pd.Timestamp(p.stat().st_mtime, unit='s').strftime('%Y-%m-%d %H:%M')})",
         )
-        st.markdown("---")
-        st.caption("バックテストを再実行するには:")
-        st.code("python scripts/run_backtest.py", language="bash")
 
     data = load_run(str(selected_run))
     trades_df = trades_dataframe(data.get("trades", []))
