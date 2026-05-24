@@ -44,8 +44,50 @@ stock_prices/
 
 ## セットアップ
 
+### Windows ユーザー向け (ワンクリックセットアップ) ★推奨
+
+#### ステップ1: Python のインストール (未インストールの場合のみ)
+
+1. [https://www.python.org/downloads/](https://www.python.org/downloads/) にアクセス
+2. **「Download Python 3.12.x」** の黄色いボタンをクリック
+3. ダウンロードした `python-3.12.x-amd64.exe` を実行
+4. **⚠重要⚠** インストール画面の最下部にある
+   **「Add python.exe to PATH」のチェックボックスを必ずON** にする
+5. 「Install Now」をクリック → 完了したらPCを一度再起動
+
+確認: コマンドプロンプトで `python --version` を実行し、`Python 3.12.x` と表示されれば成功
+
+#### ステップ2: このプロジェクトをセットアップ
+
+1. [PR画面](https://github.com/unnamed-hiro/stock_prices/pull/1) 右上の「Code」→「Download ZIP」、または
+   `git clone https://github.com/unnamed-hiro/stock_prices.git`
+2. ZIP の場合は展開、フォルダを開く
+3. **`setup.bat` をダブルクリック** ※初回は5〜10分かかります
+4. 完了後、以下のバッチファイルから操作:
+
+| バッチファイル | 用途 |
+|---|---|
+| `run_dashboard.bat` | ブラウザでダッシュボードを開く |
+| `run_live.bat` | AIに当日の売買判断をさせる |
+| `run_backtest.bat` | 過去データでバックテストを実行 |
+
+#### Windows トラブルシューティング
+
+| 症状 | 対処 |
+|---|---|
+| `'python' は内部コマンド〜` | PATH設定漏れ。Python再インストール時にPATHにチェック |
+| PowerShell で `setup.ps1` が実行できない | 管理者PowerShellで `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` を1回実行 |
+| pip インストールが極端に遅い | 社内プロキシ環境の可能性。`pip install --proxy http://proxy:port -r requirements.txt` |
+| Streamlit が起動しない | ポート8501が使用中。`streamlit run app\dashboard.py --server.port 8502` で別ポート |
+| ウイルス対策でブロックされる | Defender 等で `.venv` フォルダを除外設定に追加 |
+
+### macOS / Linux ユーザー向け
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+python scripts/generate_demo_prices.py    # オプション: デモデータ
 ```
 
 LLM戦略を使う場合のみ:
