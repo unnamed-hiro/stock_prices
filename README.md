@@ -31,9 +31,12 @@ stock_prices/
 │       ├── technical.py     # MA + RSI + 出来高
 │       ├── ml.py            # LightGBM / ロジスティック回帰
 │       └── llm.py           # Claude API
+├── app/
+│   └── dashboard.py         # 結果ビューア (Streamlit)
 ├── scripts/
 │   ├── fetch_prices.py      # 価格事前ダウンロード
-│   └── run_backtest.py      # バックテスト実行 (メイン)
+│   ├── run_backtest.py      # バックテスト実行 (メイン)
+│   └── generate_sample_results.py  # ダッシュボード動作確認用ダミーデータ
 ├── tests/
 │   └── test_portfolio.py    # 資金管理ユニットテスト
 └── results/                 # 実行結果 JSON (自動生成)
@@ -75,6 +78,23 @@ python scripts/run_backtest.py --strategy ml
 ```bash
 python scripts/run_backtest.py --strategy llm --limit 30
 ```
+
+### 5. 結果をブラウザで確認
+
+```bash
+# yfinanceに繋がらない環境でも先にサンプル結果を生成できる
+python scripts/generate_sample_results.py
+
+# ダッシュボード起動
+streamlit run app/dashboard.py
+```
+
+ダッシュボードでは以下を確認できます:
+
+- **総合サマリ** — 累積/年率リターン、シャープ、最大DD、エクイティカーブ、採用判定
+- **銘柄別** — 全銘柄の損益ランキング、勝率、平均保有日数
+- **銘柄詳細** — 銘柄を選択して取引履歴と売却タイミング別損益を可視化
+- **全取引** — buy/sellでフィルタ、CSVダウンロード
 
 ## 設定変更 (`config.yaml`)
 
