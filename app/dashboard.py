@@ -11,12 +11,23 @@ import plotly.graph_objects as go
 
 
 RESULTS_DIR = Path("results")
+DAILY_DIR = Path("results/daily")
+STATE_PATH = Path("data/state/portfolio.json")
 
 
 def list_runs() -> list[Path]:
     if not RESULTS_DIR.exists():
         return []
-    return sorted(RESULTS_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return sorted(
+        [p for p in RESULTS_DIR.glob("*.json") if p.parent == RESULTS_DIR],
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    )
+
+
+def list_daily_logs() -> list[Path]:
+    if not DAILY_DIR.exists():
+        return []
+    return sorted(DAILY_DIR.glob("*.json"), key=lambda p: p.name)
 
 
 @st.cache_data
@@ -188,17 +199,99 @@ def render_all_trades(trades_df: pd.DataFrame):
     st.download_button("CSV をダウンロード", csv, "trades.csv", "text/csv")
 
 
+def render_live_state():
+    st.subheader("AIライブ・ペーパー口座 (現在の状態)")
+    if not STATE_PATH.exists():
+        st.info("`python scripts/run_live.py` をまだ実行していません")
+        return
+    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+
+    eq_history = state.get("equity_curve", [])
+    current_eq = eq_history[-1][1] if eq_history else state["cash"]
+    initial = state["initial_capital"]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("現在評価額", f"{current_eq:,.0f} 円",
+              f"{(current_eq - initial) / initial * 100:+.2f}%")
+    c2.metric("現金残", f"{state['cash']:,.0f} 円")
+    c3.metric("保有銘柄数", len(state["positions"]))
+    c4.metric("総取引数", len(state["trades"]))
+
+    if state["positions"]:
+        st.markdown("**現在の保有ポジション**")
+        rows = []
+        for t, p in state["positions"].items():
+            rows.append({"銘柄": t, "株数": p["shares"],
+                         "取得単価": p["entry_price"],
+                         "取得日": p["entry_date"][:10]})
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    daily_logs = list_daily_logs()
+    if daily_logs:
+        st.markdown("---")
+        st.markdown(f"**日次ログ ({len(daily_logs)}日分)**")
+        rows = []
+        for p in daily_logs:
+            log = json.loads(p.read_text(encoding="utf-8"))
+            rows.append({
+                "日付": log["date"],
+                "戦略": log["strategy"],
+                "評価額": log["ending_equity"],
+                "現金": log["cash"],
+                "保有": log["n_positions"],
+                "AI買付": len(log.get("executed_buys", [])),
+                "AI売却": len(log.get("executed_sells", [])),
+                "リスク決済": len(log.get("exits", [])),
+            })
+        log_df = pd.DataFrame(rows)
+        st.dataframe(
+            log_df.style.format({"評価額": "{:,.0f}", "現金": "{:,.0f}"}),
+            use_container_width=True, hide_index=True,
+        )
+
+        st.markdown("**個別の日次レポート**")
+        selected_day = st.selectbox("日付を選択",
+                                    [p.stem for p in reversed(daily_logs)])
+        log = json.loads((DAILY_DIR / f"{selected_day}.json").read_text(encoding="utf-8"))
+
+        for section, items, color in [
+            ("リスク管理による決済", log.get("exits", []), "orange"),
+            ("AI判断による売却", log.get("executed_sells", []), "blue"),
+            ("AI判断による買付", log.get("executed_buys", []), "green"),
+        ]:
+            if items:
+                st.markdown(f"##### :{color}[{section}] ({len(items)}件)")
+                for it in items:
+                    cols = st.columns([2, 3, 5])
+                    cols[0].write(f"**{it['ticker']}**")
+                    if "price" in it:
+                        cols[1].write(f"{it['price']:,.0f}円")
+                    cols[2].write(it.get("reason", ""))
+
+
 def main():
     st.set_page_config(page_title="株式売買シミュレーション結果", layout="wide")
     st.title("株式売買シミュレーション ダッシュボード")
 
     runs = list_runs()
-    if not runs:
+    live_exists = STATE_PATH.exists()
+
+    if not runs and not live_exists:
         st.error("`results/` に結果ファイルがありません。\n\n"
-                 "先に `python scripts/run_backtest.py` を実行してください。")
+                 "先に `python scripts/run_backtest.py` か "
+                 "`python scripts/run_live.py` を実行してください。")
+        return
+
+    mode = st.sidebar.radio("表示モード",
+                            ["バックテスト結果", "AIライブ運用"],
+                            index=0 if runs else 1)
+
+    if mode == "AIライブ運用":
+        render_live_state()
         return
 
     with st.sidebar:
+        st.markdown("---")
         st.header("結果ファイル選択")
         selected_run = st.selectbox(
             "実行結果",

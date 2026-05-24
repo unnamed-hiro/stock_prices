@@ -79,7 +79,56 @@ python scripts/run_backtest.py --strategy ml
 python scripts/run_backtest.py --strategy llm --limit 30
 ```
 
-### 5. 結果をブラウザで確認
+### 5. AIライブ・ペーパートレード (毎日AIに判断させる)
+
+過去データの一気再生ではなく、**毎日AIに判断させて仮想口座を更新し続ける**モード。
+状態は `data/state/portfolio.json` に永続化され、複数日にわたって継続します。
+
+```bash
+# 当日 (最新営業日) の判断
+python scripts/run_live.py --strategy technical
+
+# 任意日付で実行 (例: 2024-12-20の判断)
+python scripts/run_live.py --strategy technical --date 2024-12-20
+
+# 判断のみ表示、口座変更しない
+python scripts/run_live.py --strategy technical --dry-run
+
+# 仮想口座をリセット
+python scripts/run_live.py --reset
+```
+
+**毎営業日18時に自動実行** (cron):
+```cron
+0 18 * * 1-5 cd /path/to/stock_prices && python scripts/run_live.py --strategy technical
+```
+
+**ネットワークに繋がらない環境でデモする場合**:
+```bash
+python scripts/generate_demo_prices.py     # 合成価格データを生成
+python scripts/run_live.py --reset
+python scripts/run_live.py --limit 15 --date 2024-08-06 --lookback-days 300
+```
+
+実行時の出力例:
+```
+==================================================================
+  AIライブ判断レポート  2024-08-06  戦略:technical
+==================================================================
+  開始評価額   :       5,000,000 円
+  終了評価額   :       4,999,288 円  (-712 / -0.01%)
+  現金残       :       4,643,680 円
+  保有銘柄数   : 1
+------------------------------------------------------------------
+  AI判断による買付 (1件)
+    7203.T 100株 @ 3,556円  = 355,608円  信頼度 0.46
+      根拠: golden_cross, rsi=63.5, vol×1.5
+==================================================================
+```
+
+日次ログは `results/daily/YYYY-MM-DD.json` に保存され、後でダッシュボードで確認可能。
+
+### 6. 結果をブラウザで確認
 
 ```bash
 # yfinanceに繋がらない環境でも先にサンプル結果を生成できる

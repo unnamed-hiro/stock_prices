@@ -4,7 +4,7 @@
 # このファイルを編集すれば、コードを変えずに条件を変更できます
 
 simulation:
-  initial_capital: 1000000      # 初期資金 (円)
+  initial_capital: 5000000      # 初期資金 (円) — 日本株は100株単位なので最低限の規模が必要
   commission_rate: 0.001        # 手数料率 (0.1%)
   slippage_rate: 0.001          # スリッページ率 (0.1%)
   start_date: "2023-01-01"      # シミュレーション開始日
@@ -16,7 +16,7 @@ universe:
   max_positions: 20             # 同時保有可能な最大銘柄数
 
 risk:
-  position_size_pct: 0.05       # 1銘柄あたりの資産配分 (5%)
+  position_size_pct: 0.10       # 1銘柄あたりの資産配分 (10%) — 5M×10%=50万円が1銘柄上限
   stop_loss_pct: 0.05           # 損切りライン (-5%)
   take_profit_pct: 0.15         # 利確ライン (+15%)
   max_holding_days: 60          # 最大保有日数
