@@ -170,6 +170,33 @@ python scripts/run_live.py --limit 15 --date 2024-08-06 --lookback-days 300
 
 日次ログは `results/daily/YYYY-MM-DD.json` に保存され、後でダッシュボードで確認可能。
 
+### 5b. 準リアルタイム AI 売買 (5分ポーリング)
+
+```bash
+python scripts/run_realtime.py                  # 通常実行 (営業時間中のみ)
+python scripts/run_realtime.py --once --force-run  # 1ティックだけ実行
+python scripts/run_realtime.py --dry-run        # 判断のみ表示
+python scripts/run_realtime.py --reset          # 仮想口座リセット
+```
+
+Windowsなら **`run_realtime.bat`** をダブルクリック。
+
+- **データソース**: yfinance 1分足 (約15分遅延)
+- **監視銘柄**: 日経主要20銘柄 (`config.yaml` の `realtime.watchlist` で変更可)
+- **インジケータ**: EMA(5)/EMA(20) クロス + RSI(14) + 出来高スパイク
+- **営業時間判定**: 9:00〜11:30, 12:30〜15:00 (JST) 以外は自動待機
+- **状態保存**: `data/state/realtime_portfolio.json` (日次モードと分離)
+- **ティック履歴**: `results/realtime/YYYY-MM-DD/HHMMSS.json`
+
+**重要な制約:**
+
+| 項目 | 内容 |
+|---|---|
+| 遅延 | Yahoo Finance の仕様で 15〜20分遅延あり |
+| 真のリアルタイム | 必要なら kabuステーション API 連携など別実装が必要 |
+| 仮想売買 | リアルマネーは動かない |
+| Rate limit | 20銘柄×5分間隔がyfinanceの実用範囲。1分間隔や全400銘柄監視は非推奨 |
+
 ### 6. 結果をブラウザで確認
 
 ```bash

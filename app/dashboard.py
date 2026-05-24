@@ -12,7 +12,9 @@ import plotly.graph_objects as go
 
 RESULTS_DIR = Path("results")
 DAILY_DIR = Path("results/daily")
+REALTIME_DIR = Path("results/realtime")
 STATE_PATH = Path("data/state/portfolio.json")
+REALTIME_STATE_PATH = Path("data/state/realtime_portfolio.json")
 
 
 def list_runs() -> list[Path]:
@@ -269,6 +271,81 @@ def render_live_state():
                     cols[2].write(it.get("reason", ""))
 
 
+def render_realtime_state():
+    st.subheader("準リアルタイム AI 売買 (5分ポーリング)")
+    auto = st.checkbox("自動更新 (30秒ごと)", value=False,
+                       help="run_realtime.bat 実行中にチェックすると最新tickが自動表示される")
+    if auto:
+        # Streamlit 1.30+ : st.experimental_rerun の代替
+        try:
+            from streamlit_autorefresh import st_autorefresh  # type: ignore
+            st_autorefresh(interval=30_000, key="rt_refresh")
+        except ImportError:
+            import time as _t
+            _t.sleep(30)
+            st.rerun()
+
+    if not REALTIME_STATE_PATH.exists():
+        st.info("リアルタイムモードはまだ実行されていません。\n\n"
+                "`run_realtime.bat` をダブルクリックして起動してください。")
+        return
+    state = json.loads(REALTIME_STATE_PATH.read_text(encoding="utf-8"))
+
+    # 最新スナップショットを探す
+    snapshots: list[Path] = []
+    if REALTIME_DIR.exists():
+        for d in sorted(REALTIME_DIR.iterdir()):
+            if d.is_dir():
+                snapshots.extend(sorted(d.glob("*.json")))
+    latest_eq = state["cash"]
+    if snapshots:
+        latest = json.loads(snapshots[-1].read_text(encoding="utf-8"))
+        latest_eq = latest["equity"]
+
+    initial = state["initial_capital"]
+    pnl_pct = (latest_eq - initial) / initial * 100
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("最新評価額", f"{latest_eq:,.0f} 円", f"{pnl_pct:+.2f}%")
+    c2.metric("現金残", f"{state['cash']:,.0f} 円")
+    c3.metric("保有銘柄数", len(state["positions"]))
+    c4.metric("総取引数", len(state["trades"]))
+
+    if state["positions"]:
+        st.markdown("**現在の保有ポジション**")
+        rows = [{"銘柄": t, "株数": p["shares"], "取得単価": p["entry_price"],
+                 "取得日時": p["entry_date"][:19]}
+                for t, p in state["positions"].items()]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    if snapshots:
+        st.markdown("---")
+        st.markdown(f"**ティック履歴 ({len(snapshots)}件)**")
+        eq_rows = []
+        for s in snapshots:
+            d = json.loads(s.read_text(encoding="utf-8"))
+            eq_rows.append({"timestamp": d["timestamp"], "equity": d["equity"],
+                            "cash": d["cash"], "n_positions": d["n_positions"]})
+        eq_df = pd.DataFrame(eq_rows)
+        eq_df["timestamp"] = pd.to_datetime(eq_df["timestamp"])
+        fig = px.line(eq_df, x="timestamp", y="equity",
+                      title="評価額の推移 (1日)")
+        fig.add_hline(y=initial, line_dash="dash", line_color="gray",
+                      annotation_text=f"初期資金 {initial:,.0f}円")
+        st.plotly_chart(fig, use_container_width=True)
+
+        # 直近の約定
+        recent_trades = []
+        for s in snapshots[-20:]:
+            d = json.loads(s.read_text(encoding="utf-8"))
+            for e in d.get("executed", []):
+                recent_trades.append({"時刻": d["timestamp"][11:19], **e})
+        if recent_trades:
+            st.markdown("**直近の約定**")
+            st.dataframe(pd.DataFrame(recent_trades),
+                         use_container_width=True, hide_index=True)
+
+
 def main():
     st.set_page_config(page_title="株式売買シミュレーション結果", layout="wide")
     st.title("株式売買シミュレーション ダッシュボード")
@@ -283,11 +360,15 @@ def main():
         return
 
     mode = st.sidebar.radio("表示モード",
-                            ["バックテスト結果", "AIライブ運用"],
+                            ["バックテスト結果", "AIライブ運用 (日次)",
+                             "準リアルタイム"],
                             index=0 if runs else 1)
 
-    if mode == "AIライブ運用":
+    if mode == "AIライブ運用 (日次)":
         render_live_state()
+        return
+    if mode == "準リアルタイム":
+        render_realtime_state()
         return
 
     with st.sidebar:
