@@ -142,9 +142,9 @@ def render_overview(data: dict):
             rows.append({"指標": name,
                          "判定": "OK" if info["pass"] else "NG",
                          "実績/基準": info["detail"]})
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
-    st.plotly_chart(equity_chart(data.get("equity_curve", [])), use_container_width=True)
+    st.plotly_chart(equity_chart(data.get("equity_curve", [])), width="stretch")
 
 
 def render_per_ticker(trades_df: pd.DataFrame):
@@ -167,14 +167,14 @@ def render_per_ticker(trades_df: pd.DataFrame):
             "平均保有日": "{:.1f}",
             "勝率_%": "{:.1f}",
         }),
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
 
     fig = px.bar(summary.head(top_n), x="ticker", y="合計損益",
                  color="合計損益", color_continuous_scale="RdYlGn",
                  title=f"銘柄別 合計損益 (上位{top_n})")
     fig.update_layout(height=400, xaxis_title="銘柄", yaxis_title="損益 (円)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_ticker_detail(trades_df: pd.DataFrame):
@@ -195,7 +195,7 @@ def render_ticker_detail(trades_df: pd.DataFrame):
             "pnl": "{:,.0f}",
             "shares": "{:,.0f}",
         }),
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
 
     sells = filtered[filtered["side"] == "sell"]
@@ -205,7 +205,7 @@ def render_ticker_detail(trades_df: pd.DataFrame):
                          title="売却タイミング別 損益")
         fig.add_hline(y=0, line_dash="dash", line_color="gray")
         fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_all_trades(trades_df: pd.DataFrame):
@@ -225,7 +225,7 @@ def render_all_trades(trades_df: pd.DataFrame):
             "pnl": "{:,.0f}",
             "shares": "{:,.0f}",
         }),
-        use_container_width=True, hide_index=True, height=500,
+        width="stretch", hide_index=True, height=500,
     )
     csv = df.to_csv(index=False).encode("utf-8-sig")
     st.download_button("CSV をダウンロード", csv, "trades.csv", "text/csv")
@@ -256,7 +256,7 @@ def render_live_state():
             rows.append({"銘柄": t, "株数": p["shares"],
                          "取得単価": p["entry_price"],
                          "取得日": p["entry_date"][:10]})
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     daily_logs = list_daily_logs()
     if daily_logs:
@@ -278,7 +278,7 @@ def render_live_state():
         log_df = pd.DataFrame(rows)
         st.dataframe(
             log_df.style.format({"評価額": "{:,.0f}", "現金": "{:,.0f}"}),
-            use_container_width=True, hide_index=True,
+            width="stretch", hide_index=True,
         )
 
         st.markdown("**個別の日次レポート**")
@@ -346,7 +346,7 @@ def render_realtime_state():
         rows = [{"銘柄": t, "株数": p["shares"], "取得単価": p["entry_price"],
                  "取得日時": p["entry_date"][:19]}
                 for t, p in state["positions"].items()]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     if snapshots:
         st.markdown("---")
@@ -362,7 +362,7 @@ def render_realtime_state():
                       title="評価額の推移 (1日)")
         fig.add_hline(y=initial, line_dash="dash", line_color="gray",
                       annotation_text=f"初期資金 {initial:,.0f}円")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         # 直近の約定
         recent_trades = []
@@ -373,7 +373,7 @@ def render_realtime_state():
         if recent_trades:
             st.markdown("**直近の約定**")
             st.dataframe(pd.DataFrame(recent_trades),
-                         use_container_width=True, hide_index=True)
+                         width="stretch", hide_index=True)
 
 
 def run_subprocess_streaming(cmd: list[str], label: str = "実行中"):
@@ -418,7 +418,7 @@ def render_run_backtest():
     limit = limit_map[limit_choice]
     use_cache = c3.checkbox("キャッシュ利用", value=True,
                             help="チェックを外すとyfinanceから再取得")
-    if st.button("バックテスト開始", type="primary", use_container_width=True):
+    if st.button("バックテスト開始", type="primary", width="stretch"):
         cmd = [sys.executable, "scripts/run_backtest.py", "--strategy", strategy]
         if limit is not None:
             cmd += ["--limit", str(limit)]
@@ -441,7 +441,7 @@ def render_run_live():
                             max_value=500, step=10)
 
     cc1, cc2 = st.columns([3, 1])
-    if cc1.button("AI判断を実行", type="primary", use_container_width=True,
+    if cc1.button("AI判断を実行", type="primary", width="stretch",
                   key="run_live_btn"):
         cmd = [sys.executable, "scripts/run_live.py",
                "--strategy", strategy, "--date", str(date)]
@@ -450,7 +450,7 @@ def render_run_live():
         if limit > 0:
             cmd += ["--limit", str(limit)]
         run_subprocess_streaming(cmd, "AI判断実行中...")
-    if cc2.button("口座をリセット", use_container_width=True, key="live_reset"):
+    if cc2.button("口座をリセット", width="stretch", key="live_reset"):
         run_subprocess_streaming([sys.executable, "scripts/run_live.py", "--reset"],
                                   "リセット中...")
 
@@ -466,7 +466,7 @@ def render_run_realtime():
 
     cc1, cc2 = st.columns([3, 1])
     if cc1.button("1ティック実行", type="primary",
-                  use_container_width=True, key="rt_once"):
+                  width="stretch", key="rt_once"):
         cmd = [sys.executable, "scripts/run_realtime.py",
                "--once", "--interval", "1"]
         if dry:
@@ -475,7 +475,7 @@ def render_run_realtime():
             cmd.append("--force-run")
         run_subprocess_streaming(cmd, "1ティック実行中...")
         st.rerun()
-    if cc2.button("口座リセット", use_container_width=True, key="rt_reset"):
+    if cc2.button("口座リセット", width="stretch", key="rt_reset"):
         run_subprocess_streaming(
             [sys.executable, "scripts/run_realtime.py", "--reset"], "リセット中...")
         st.rerun()
@@ -518,7 +518,7 @@ def render_realtime_state_compact():
         rows = [{"銘柄": t, "株数": p["shares"], "取得単価": p["entry_price"],
                  "取得日時": p["entry_date"][:19]}
                 for t, p in state["positions"].items()]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
     if snapshots:
         eq_rows = []
@@ -529,7 +529,7 @@ def render_realtime_state_compact():
         eq_df["timestamp"] = pd.to_datetime(eq_df["timestamp"])
         fig = px.line(eq_df, x="timestamp", y="equity", title="評価額推移")
         fig.add_hline(y=initial, line_dash="dash", line_color="gray")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 def render_settings():
