@@ -586,7 +586,7 @@ def render_logs_browser():
     selected = st.selectbox(
         "ファイル選択",
         files,
-        format_func=lambda p: f"{p.relative_to(PROJECT_ROOT)} "
+        format_func=lambda p: f"{p} "
                               f"({pd.Timestamp(p.stat().st_mtime, unit='s').strftime('%m-%d %H:%M')})",
     )
     data = json.loads(Path(selected).read_text(encoding="utf-8"))
