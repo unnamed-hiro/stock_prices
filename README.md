@@ -300,14 +300,44 @@ streamlit run app/dashboard.py
 - PR: https://github.com/unnamed-hiro/stock_prices/pull/1
 - "Files changed" タブで全変更を確認できます
 
-### C. Streamlit Community Cloud で無料デプロイ
+### C. Streamlit Community Cloud で無料デプロイ (Webで誰でも閲覧)
 
-URLを誰かと共有したい場合の選択肢です。
+URLを誰かと共有したい / 外出先のスマホからも見たい場合の最も簡単な方法です。
+サーバー契約・課金は不要で、実行ボタンも全部動きます。
 
-1. https://share.streamlit.io にGitHubアカウントでログイン
-2. リポジトリ `unnamed-hiro/stock_prices` を選択
-3. メインファイルに `app/dashboard.py` を指定
-4. 公開URLが発行されます
+**手順:**
+
+1. https://share.streamlit.io に GitHubアカウントでログイン
+2. 「New app」→ 「Deploy a public app from GitHub」
+3. 以下を指定:
+   - **Repository**: `unnamed-hiro/stock_prices`
+   - **Branch**: `claude/stock-trading-ai-sim-os7Ax` (mainにマージ後は `main`)
+   - **Main file path**: `app/dashboard.py`
+4. (任意) LLM戦略を使う場合は「Advanced settings」→「Secrets」に以下を貼る:
+   ```toml
+   ANTHROPIC_API_KEY = "sk-ant-..."
+   ```
+5. 「Deploy」 → 数分後に `https://<アプリ名>.streamlit.app` が発行されます
+
+**デプロイ時の自動処理:**
+
+- 初回アクセス時、結果や価格データが無ければ**デモデータを自動生成**します
+  (`app/dashboard.py` の `bootstrap_demo_data()` が実行)
+- `runtime.txt` で Python 3.11、`requirements.txt` で依存を自動インストール
+- `.streamlit/config.toml` でテーマ・サーバー設定を適用
+
+**クラウド版の制約 (重要):**
+
+| 項目 | 内容 |
+|---|---|
+| 永続化 | ファイルシステムが一時的なため、**設定変更・口座状態・実行結果は再起動で消えます** |
+| 用途 | デモ・共有・閲覧向き。**継続的な日次/リアルタイム運用はローカルPC版を推奨** |
+| リソース | 無料枠は 1GB RAM / CPU共有。全400銘柄バックテストは重い場合あり (銘柄数を絞る) |
+| 公開範囲 | Public app は誰でもURLで閲覧可能。非公開にしたい場合は要 Streamlit 有料プラン |
+
+> ❌ **共有レンタルサーバー (通常のXserver, さくらのレンタルサーバー等) では動きません。**
+> Streamlit は Python の常駐プロセスと WebSocket が必要で、PHP向け共有ホスティングでは
+> 起動できないためです。VPS (Xserver VPS等) なら nginx + systemd で公開可能です。
 
 ### 動作確認用のテストデータ
 

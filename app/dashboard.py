@@ -3,6 +3,7 @@
 起動: streamlit run app/dashboard.py
 """
 import json
+import os
 import subprocess
 import sys
 import time
@@ -14,13 +15,36 @@ import plotly.graph_objects as go
 import yaml
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# クラウド等でカレントディレクトリが異なる場合に備えてルートへ移動
+os.chdir(PROJECT_ROOT)
+
 RESULTS_DIR = Path("results")
 DAILY_DIR = Path("results/daily")
 REALTIME_DIR = Path("results/realtime")
 STATE_PATH = Path("data/state/portfolio.json")
 REALTIME_STATE_PATH = Path("data/state/realtime_portfolio.json")
 CONFIG_PATH = Path("config.yaml")
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@st.cache_resource
+def bootstrap_demo_data() -> list[str]:
+    """結果や価格データが無い環境 (Streamlit Cloud初回など) で
+    デモデータとサンプル結果を自動生成する。1セッション1回のみ実行。"""
+    msgs: list[str] = []
+    cache_dir = Path("data/cache")
+    if not cache_dir.exists() or not any(cache_dir.glob("*.parquet")):
+        r = subprocess.run([sys.executable, "scripts/generate_demo_prices.py"],
+                           cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        if r.returncode == 0:
+            msgs.append("デモ価格データを生成しました")
+    if not RESULTS_DIR.exists() or not any(RESULTS_DIR.glob("*.json")):
+        r = subprocess.run(
+            [sys.executable, "scripts/generate_sample_results.py", "--all"],
+            cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        if r.returncode == 0:
+            msgs.append("サンプル結果を生成しました")
+    return msgs
 
 
 def list_runs() -> list[Path]:
@@ -575,6 +599,18 @@ def main():
     st.title("株式売買シミュレーション")
     st.caption("📊 結果閲覧 + ▶️ 操作パネル を1つのWebUIに統合 / "
                "コマンドプロンプト不要")
+
+    boot_msgs = bootstrap_demo_data()
+    is_cloud = bool(os.environ.get("STREAMLIT_RUNTIME_ENV")) or \
+        "/mount/src" in str(PROJECT_ROOT)
+    if boot_msgs:
+        st.info("初回起動: " + " / ".join(boot_msgs))
+    if is_cloud:
+        st.warning(
+            "☁️ クラウド版では、設定変更・口座状態・実行結果は再起動で消えます "
+            "(一時的なファイルシステムのため)。継続運用はローカルPC版を推奨します。",
+            icon="⚠️",
+        )
 
     main_tabs = st.tabs([
         "📊 結果ダッシュボード",
