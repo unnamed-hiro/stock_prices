@@ -1,0 +1,105 @@
+# ========================================
+# 株式売買シミュレーション設定ファイル
+# ========================================
+# このファイルを編集すれば、コードを変えずに条件を変更できます
+
+simulation:
+  initial_capital: 5000000      # 初期資金 (円) — 日本株は100株単位なので最低限の規模が必要
+  commission_rate: 0.001        # 手数料率 (0.1%)
+  slippage_rate: 0.001          # スリッページ率 (0.1%)
+  start_date: "2023-01-01"      # シミュレーション開始日
+  end_date: "2024-12-31"        # シミュレーション終了日
+  benchmark: "1306.T"           # 比較ベンチマーク (TOPIX連動ETF)
+
+universe:
+  file: "data/universe_jp.csv"  # 銘柄リスト (400銘柄)
+  max_positions: 20             # 同時保有可能な最大銘柄数
+
+risk:
+  position_size_pct: 0.10       # 1銘柄あたりの資産配分 (10%) — 5M×10%=50万円が1銘柄上限
+  stop_loss_pct: 0.05           # 損切りライン (-5%)
+  take_profit_pct: 0.15         # 利確ライン (+15%)
+  max_holding_days: 60          # 最大保有日数
+  min_cash_reserve_pct: 0.10    # 最低現金残高 (10%)
+
+# AIモデル選択: technical / ml / llm
+strategy:
+  name: "technical"
+
+  technical:
+    short_ma: 5                 # 短期移動平均
+    long_ma: 25                 # 長期移動平均
+    rsi_period: 14
+    rsi_oversold: 30            # この値以下で買いシグナル候補
+    rsi_overbought: 70          # この値以上で売りシグナル候補
+    volume_ratio_min: 1.2       # 出来高が直近平均の何倍以上で有効
+
+  ml:
+    model_type: "lightgbm"
+    train_window_days: 252      # 学習に使う過去日数 (約1年)
+    retrain_freq_days: 21       # 再学習間隔
+    prediction_horizon_days: 5  # 何日先の上昇を予測するか
+    buy_threshold: 0.55         # この確率以上で買い
+    sell_threshold: 0.45        # この確率未満で売り
+
+  llm:
+    model: "claude-opus-4-7"
+    api_key_env: "ANTHROPIC_API_KEY"
+    max_tickers_per_call: 10    # API節約のため
+
+  fundamental:
+    max_per: 25.0               # この値以下を割安と評価 (PER)
+    max_pbr: 3.0                # この値以下を割安と評価 (PBR)
+    min_roe: 0.08               # ROE 8%を質の基準
+    buy_score: 0.6              # 総合スコアがこれ以上で買い候補
+    sell_score: 0.3             # これ以下で売り候補 (保有時)
+
+  # マルチAI合議制: 複数戦略の判断を重み付き集約 (API課金なし構成)
+  ensemble:
+    members: ["technical", "ml", "fundamental"]
+    weights:                    # 各専門家の発言力
+      technical: 1.0
+      ml: 1.0
+      fundamental: 0.7
+    buy_threshold: 1.0          # 加重buyスコアがこれ以上で買い (2戦略が中信頼度で一致する水準)
+    sell_threshold: 0.7         # 加重sellスコアがこれ以上で売り
+    min_agreement: 2            # 最低何戦略が一致すれば動くか
+
+# 準リアルタイム売買 (run_realtime.bat) 用設定
+realtime:
+  poll_interval_minutes: 5        # ポーリング間隔 (5分推奨、yfinanceは約15分遅延)
+  short_ema: 5                    # 短期EMA (1分足)
+  long_ema: 20                    # 長期EMA (1分足)
+  rsi_period: 14
+  vol_spike: 1.5                  # 出来高スパイク倍率
+  # 監視銘柄リスト (日経主要20銘柄)
+  watchlist:
+    - "7203.T"   # トヨタ自動車
+    - "6758.T"   # ソニーグループ
+    - "9984.T"   # ソフトバンクグループ
+    - "6098.T"   # リクルートHD
+    - "6861.T"   # キーエンス
+    - "7974.T"   # 任天堂
+    - "8035.T"   # 東京エレクトロン
+    - "9983.T"   # ファーストリテイリング
+    - "8058.T"   # 三菱商事
+    - "6501.T"   # 日立製作所
+    - "6594.T"   # ニデック
+    - "4063.T"   # 信越化学工業
+    - "4519.T"   # 中外製薬
+    - "8316.T"   # 三井住友FG
+    - "8306.T"   # 三菱UFJ FG
+    - "7267.T"   # ホンダ
+    - "6902.T"   # デンソー
+    - "9433.T"   # KDDI
+    - "9434.T"   # ソフトバンク
+    - "4502.T"   # 武田薬品工業
+
+# 売買成功条件 (この基準を超えれば「成功した戦略」と判定)
+success_criteria:
+  min_win_rate: 0.55            # 最低勝率 55%
+  min_profit_factor: 1.5        # 損益比 (総利益/総損失) 1.5以上
+  min_sharpe: 1.0               # シャープレシオ 1.0以上
+  max_drawdown: 0.20            # 最大ドローダウン 20%以内
+  min_annual_return: 0.10       # 年率リターン 10%以上
+  min_trades: 20                # 統計的に有意な最低取引数
