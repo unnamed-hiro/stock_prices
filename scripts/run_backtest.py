@@ -27,7 +27,8 @@ from src.metrics import compute_metrics, evaluate_success, format_report
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.yaml")
-    parser.add_argument("--strategy", default=None, help="technical / ml / llm")
+    parser.add_argument("--strategy", default=None,
+                        help="ensemble / technical / ml / fundamental / llm")
     parser.add_argument("--limit", type=int, default=None, help="銘柄数を制限 (動作確認用)")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--out", default="results/last_run.json")

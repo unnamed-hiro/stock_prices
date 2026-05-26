@@ -26,17 +26,22 @@ def fetch_one(ticker: str, start: str, end: str, use_cache: bool = True) -> pd.D
 
 
 def fetch_many(
-    tickers: list[str], start: str, end: str, use_cache: bool = True
+    tickers: list[str], start: str, end: str, use_cache: bool = True,
+    progress: bool = True,
 ) -> dict[str, pd.DataFrame]:
-    """ticker → OHLCV DataFrame の辞書を返す。失敗銘柄は除外"""
+    """ticker → OHLCV DataFrame の辞書を返す。失敗銘柄は除外。
+    銘柄数が多い場合に進捗を表示する。"""
     out: dict[str, pd.DataFrame] = {}
-    for t in tickers:
+    total = len(tickers)
+    for i, t in enumerate(tickers, 1):
         try:
             df = fetch_one(t, start, end, use_cache=use_cache)
             if not df.empty and len(df) > 30:
                 out[t] = df
         except Exception as e:
             print(f"[warn] fetch failed for {t}: {e}")
+        if progress and (i % 25 == 0 or i == total):
+            print(f"      ...取得進捗 {i}/{total}  (成功 {len(out)})", flush=True)
     return out
 
 
