@@ -455,6 +455,73 @@ def render_run_live():
                                   "リセット中...")
 
 
+def render_run_intraday():
+    st.subheader("本日トレードシミュレーション")
+    st.caption("その日の1分足を寄り付きから引けまで時系列で再生し、AIが分単位で売買したら"
+               "どうなるかを一気に再現します (引け後の実行がおすすめ)。")
+
+    c1, c2, c3 = st.columns(3)
+    date = c1.date_input("対象日", value=pd.Timestamp.today().date(),
+                         help="1分足はyfinance仕様で直近約7日まで")
+    step = c2.selectbox("判断間隔", [1, 5, 15], index=0,
+                        format_func=lambda x: f"{x}分ごと",
+                        help="間隔を広げると高速になります")
+    eod_hold = c3.checkbox("引けで持ち越す", value=False,
+                           help="OFFなら引けで全ポジション手仕舞い")
+
+    today = pd.Timestamp.today().date()
+    if st.button("シミュレーション開始", type="primary",
+                 width="stretch", key="run_intraday_btn"):
+        cmd = [sys.executable, "scripts/run_intraday.py", "--step", str(step)]
+        if date != today:
+            cmd += ["--date", str(date)]
+        if eod_hold:
+            cmd.append("--hold")
+        run_subprocess_streaming(cmd, "本日シミュレーション実行中...")
+        st.rerun()
+
+    # 直近の結果を表示
+    intraday_dir = Path("results/intraday")
+    files = sorted(intraday_dir.glob("*.json")) if intraday_dir.exists() else []
+    if not files:
+        st.info("まだ実行結果がありません。上のボタンで実行してください。")
+        return
+
+    st.markdown("---")
+    sel = st.selectbox("結果を表示", list(reversed(files)),
+                       format_func=lambda p: p.stem, key="intraday_sel")
+    r = json.loads(Path(sel).read_text(encoding="utf-8"))
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("対象日", r["date"])
+    m2.metric("終了評価額", f"{r['ending_equity']:,.0f}円", f"{r['pnl_pct']:+.2f}%")
+    n_sells = sum(1 for t in r["trades"] if t["side"] == "sell")
+    n_buys = sum(1 for t in r["trades"] if t["side"] == "buy")
+    m3.metric("約定", f"{n_buys}買 / {n_sells}売")
+    win = sum(1 for t in r["trades"] if t["side"] == "sell" and t["pnl"] > 0)
+    m4.metric("利益確定", f"{win} / {n_sells}" if n_sells else "0")
+
+    if r.get("equity_curve"):
+        ec = pd.DataFrame(r["equity_curve"], columns=["time", "equity"])
+        ec["time"] = pd.to_datetime(ec["time"])
+        fig = px.line(ec, x="time", y="equity",
+                      title=f"{r['date']} のイントラデイ評価額推移")
+        fig.add_hline(y=r["starting_equity"], line_dash="dash",
+                      line_color="gray", annotation_text="開始評価額")
+        fig.update_layout(height=380, xaxis_title="時刻", yaxis_title="評価額(円)")
+        st.plotly_chart(fig, width="stretch")
+
+    if r["trades"]:
+        st.markdown("**約定履歴**")
+        tdf = pd.DataFrame(r["trades"])
+        tdf["time"] = pd.to_datetime(tdf["time"]).dt.strftime("%H:%M")
+        st.dataframe(
+            tdf[["time", "ticker", "side", "shares", "price", "pnl"]].style.format(
+                {"price": "{:,.0f}", "pnl": "{:,.0f}", "shares": "{:,.0f}"}),
+            width="stretch", hide_index=True,
+        )
+
+
 def render_run_realtime():
     st.subheader("準リアルタイム AI 売買")
     st.caption("yfinance 1分足を取得 → AI判断 → 仮想売買。約15分遅延あり。")
@@ -614,6 +681,7 @@ def main():
 
     main_tabs = st.tabs([
         "📊 結果ダッシュボード",
+        "📅 本日シミュレーション",
         "▶️ バックテスト実行",
         "🤖 AI日次判断",
         "⏱️ 準リアルタイム",
@@ -624,14 +692,16 @@ def main():
     with main_tabs[0]:
         render_results_dashboard()
     with main_tabs[1]:
-        render_run_backtest()
+        render_run_intraday()
     with main_tabs[2]:
-        render_run_live()
+        render_run_backtest()
     with main_tabs[3]:
-        render_run_realtime()
+        render_run_live()
     with main_tabs[4]:
-        render_logs_browser()
+        render_run_realtime()
     with main_tabs[5]:
+        render_logs_browser()
+    with main_tabs[6]:
         render_settings()
 
 
