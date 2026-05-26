@@ -6,7 +6,7 @@
 ## 特徴
 
 - **400銘柄ユニバース** — JPX日経400ベースの日本株を `data/universe_jp.csv` で管理
-- **プラガブルAI** — テクニカル / 機械学習 / LLM (Claude API) を `config.yaml` で切替
+- **プラガブルAI** — テクニカル / 機械学習 / ファンダメンタルズ / LLM(Claude API) / マルチAI合議制 を `config.yaml` で切替
 - **ペーパートレード専用** — 実発注ロジックは持たず、誤発注の事故が起きない設計
 - **明文化された成功条件** — 勝率・損益比・シャープ・最大DD・年率リターンを自動判定
 - **キャッシュ** — yfinanceで一度取得した価格は `data/cache/` に再利用
@@ -120,6 +120,43 @@ python scripts/run_backtest.py --strategy ml
 ```bash
 python scripts/run_backtest.py --strategy llm --limit 30
 ```
+
+### 4b. ファンダメンタルズ戦略 (PER/PBR/ROE)
+
+```bash
+python scripts/run_backtest.py --strategy fundamental
+```
+
+yfinanceから財務指標を取得し、**割安(PER/PBR低)かつ質が高い(ROE高)**銘柄を選好します。
+
+> ⚠️ **先読みバイアスの注意**: yfinanceの財務指標は「現在値」のみ取得可能で、
+> 過去時点の財務は取れません。**バックテストでは現在のファンダを過去に適用**するため
+> 厳密には先読みバイアスが入ります。ライブ運用・本日判断では問題ありません。
+
+### 4c. マルチAI合議制 (アンサンブル) ★おすすめ
+
+```bash
+python scripts/run_backtest.py --strategy ensemble
+```
+
+**複数の戦略を「専門家」とみなし、判断を重み付きで集約**します。全員一致なら強いシグナル、
+意見が割れれば見送り — **ダマシを減らしリスクを分散**する、最も実戦的な構成です。
+
+- **メンバー**: `technical` + `ml` + `fundamental` (デフォルト、**API課金なし**)
+- **合議ルール**: 加重buyスコア ≥ `buy_threshold` かつ `min_agreement` 戦略以上が一致で買い
+- **設定**: `config.yaml` の `strategy.ensemble` でメンバー・重み・閾値を調整可能
+
+```yaml
+strategy:
+  ensemble:
+    members: ["technical", "ml", "fundamental"]
+    weights: {technical: 1.0, ml: 1.0, fundamental: 0.7}
+    buy_threshold: 1.0    # 加重スコアの買い閾値
+    min_agreement: 2      # 最低何戦略が一致すれば動くか
+```
+
+デモ15銘柄での検証例: 71取引・勝率62.9%・損益比1.71・最大DD-2.5%。
+ブラウザの各実行タブやWindowsバッチからも `ensemble` を選べます。
 
 ### 5. AIライブ・ペーパートレード (毎日AIに判断させる)
 

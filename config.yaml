@@ -47,6 +47,24 @@ strategy:
     api_key_env: "ANTHROPIC_API_KEY"
     max_tickers_per_call: 10    # API節約のため
 
+  fundamental:
+    max_per: 25.0               # この値以下を割安と評価 (PER)
+    max_pbr: 3.0                # この値以下を割安と評価 (PBR)
+    min_roe: 0.08               # ROE 8%を質の基準
+    buy_score: 0.6              # 総合スコアがこれ以上で買い候補
+    sell_score: 0.3             # これ以下で売り候補 (保有時)
+
+  # マルチAI合議制: 複数戦略の判断を重み付き集約 (API課金なし構成)
+  ensemble:
+    members: ["technical", "ml", "fundamental"]
+    weights:                    # 各専門家の発言力
+      technical: 1.0
+      ml: 1.0
+      fundamental: 0.7
+    buy_threshold: 1.0          # 加重buyスコアがこれ以上で買い (2戦略が中信頼度で一致する水準)
+    sell_threshold: 0.7         # 加重sellスコアがこれ以上で売り
+    min_agreement: 2            # 最低何戦略が一致すれば動くか
+
 # 準リアルタイム売買 (run_realtime.bat) 用設定
 realtime:
   poll_interval_minutes: 5        # ポーリング間隔 (5分推奨、yfinanceは約15分遅延)

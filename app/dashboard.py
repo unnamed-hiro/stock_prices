@@ -407,8 +407,10 @@ def render_run_backtest():
     st.subheader("バックテスト実行")
     st.caption("過去データで戦略を検証します。終了後、サイドバーで結果を選んで確認できます。")
     c1, c2, c3 = st.columns(3)
-    strategy = c1.selectbox("戦略", ["technical", "ml", "llm"],
-                            help="llm は ANTHROPIC_API_KEY 必須")
+    strategy = c1.selectbox("戦略",
+                            ["ensemble", "technical", "ml", "fundamental", "llm"],
+                            help="ensemble=マルチAI合議制(推奨) / "
+                                 "fundamental=財務指標 / llm は ANTHROPIC_API_KEY 必須")
     limit_choice = c2.selectbox("銘柄数",
                                 ["10 (動作確認・1分)", "20", "50",
                                  "100", "全銘柄 (5〜15分)"],
@@ -432,7 +434,10 @@ def render_run_live():
     st.subheader("AI日次判断 (1日分)")
     st.caption("当日(または指定日)の終値をもとに、AIに売買判断をさせて仮想口座を更新します。")
     c1, c2 = st.columns(2)
-    strategy = c1.selectbox("戦略", ["technical", "ml", "llm"], key="live_strat")
+    strategy = c1.selectbox("戦略",
+                            ["ensemble", "technical", "ml", "fundamental", "llm"],
+                            key="live_strat",
+                            help="ensemble=マルチAI合議制(推奨)")
     date = c2.date_input("判断日", value=pd.Timestamp.today().date(),
                          help="休場日でも直近営業日のデータで動く")
     c3, c4 = st.columns(2)
