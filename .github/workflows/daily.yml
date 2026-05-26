@@ -1,0 +1,62 @@
+name: 毎営業日 AI日次判断 (ウェブ常時更新)
+
+# 毎営業日の引け後 (JST 16:00 = UTC 07:00) に自動実行。
+# AIが当日の売買判断を行い、結果をリポジトリにコミットする。
+# Streamlit Cloud がコミットを検知して自動再デプロイ → ブラウザで常に最新を確認できる。
+#
+# 【重要】cron(スケジュール実行)は「デフォルトブランチ」でのみ発火します。
+# 自動運用を有効にするには、このワークフローを main にマージしてください。
+# それまでは Actions タブの「Run workflow」(手動実行)で動作確認できます。
+
+on:
+  schedule:
+    - cron: "0 7 * * 1-5"   # 月〜金 UTC07:00 (JST16:00)
+  workflow_dispatch:          # 手動実行も可能
+    inputs:
+      strategy:
+        description: "戦略 (ensemble/technical/ml/fundamental)"
+        default: "ensemble"
+        required: false
+
+# 同時実行を防ぐ (口座状態の競合回避)
+concurrency:
+  group: daily-live
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # 結果をコミット&プッシュするため
+
+jobs:
+  run-live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 依存をインストール
+        run: pip install -r requirements.txt
+
+      - name: AI日次判断を実行
+        run: |
+          python scripts/run_live.py \
+            --strategy "${{ github.event.inputs.strategy || 'ensemble' }}" \
+            --skip-if-done
+
+      - name: 結果をコミット&プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # results/ と data/state/ は .gitignore 対象だが、結果蓄積のため強制追加
+          git add -f results/daily data/state/portfolio.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "変更なし (休場日 or 処理済み)。コミットをスキップ。"
+          else
+            git commit -m "chore(auto): AI日次判断の結果を更新 [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

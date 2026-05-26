@@ -411,6 +411,35 @@ URLを誰かと共有したい / 外出先のスマホからも見たい場合�
 > Streamlit は Python の常駐プロセスと WebSocket が必要で、PHP向け共有ホスティングでは
 > 起動できないためです。VPS (Xserver VPS等) なら nginx + systemd で公開可能です。
 
+### D. 毎営業日 自動更新して「常にウェブで確認」 (GitHub Actions)
+
+PCを起動しなくても、**クラウド上で毎営業日 自動的にAI判断を実行し、結果をウェブに反映**できます。
+
+```
+GitHub Actions (毎営業日 JST16:00 自動実行)
+  → yfinanceで実データ取得 → AI判断(ensemble) → 仮想売買
+  → results/daily・data/state をリポジトリに自動コミット
+  → Streamlit Cloud が変更を検知して自動再デプロイ
+ブラウザでいつでも最新を確認 (PC不要・完全無料)
+```
+
+ワークフロー: `.github/workflows/daily.yml`
+
+- **実行内容**: `python scripts/run_live.py --strategy ensemble --skip-if-done`
+- **冪等性**: `--skip-if-done` が「実データの最終営業日」を判断日にし、処理済みならスキップ
+  (祝日の重複実行や二重売買を防止)
+- **API課金なし**: `ensemble` は technical+ml+fundamental のため Claude API 不要
+- **永続化**: 結果をGitに保存するため、Streamlit Cloud再起動でも消えない
+
+**有効化の手順 (重要):**
+
+1. **このPRを `main` にマージ** — cron(スケジュール実行)は**デフォルトブランチでのみ発火**します
+2. Streamlit Cloud のデプロイ元ブランチを `main` に設定
+3. (任意) すぐ試すなら GitHub の **Actions タブ → 「毎営業日 AI日次判断」→ Run workflow** で手動実行
+
+> ⚠️ 初回は Actions のログで **yfinanceがGitHubサーバーから到達できるか** を確認してください
+> (Yahooがクラウド経由のアクセスを稀にブロックするため)。`取得成功: N / M` でNが十分あればOK。
+
 ### 動作確認用のテストデータ
 
 `scripts/generate_sample_results.py` で複数パターンのダミー結果を生成できます。

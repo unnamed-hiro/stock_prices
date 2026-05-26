@@ -42,6 +42,8 @@ def main():
     parser.add_argument("--reset", action="store_true", help="仮想口座をリセット")
     parser.add_argument("--lookback-days", type=int, default=365,
                         help="戦略のwarmupに必要な過去データ取得日数")
+    parser.add_argument("--skip-if-done", action="store_true",
+                        help="最新営業日が処理済みならスキップ (自動運用向け・冪等)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -69,6 +71,17 @@ def main():
     if not price_data:
         print("[error] 価格データが1件も取得できませんでした (ネットワーク/銘柄リスト要確認)")
         sys.exit(1)
+
+    # 冪等性ガード: 実データの最終営業日を判断日にし、処理済みならスキップ
+    if args.skip_if_done:
+        from src.live_paper import DAILY_LOG_DIR
+        latest = max(df.index.max() for df in price_data.values())
+        target = pd.Timestamp(latest).normalize()
+        done_path = DAILY_LOG_DIR / f"{target.date()}.json"
+        if done_path.exists():
+            print(f"[skip] {target.date()} は既に処理済みのためスキップします")
+            return
+        print(f"[auto] 最新営業日 {target.date()} を判断対象にします")
 
     strategy = build_strategy(cfg.strategy_name, cfg.strategy_params)
 
