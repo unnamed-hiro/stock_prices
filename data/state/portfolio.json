@@ -1,0 +1,14 @@
+{
+  "initial_capital": 5000000,
+  "commission_rate": 0.001,
+  "slippage_rate": 0.001,
+  "cash": 5000000,
+  "positions": {},
+  "trades": [],
+  "equity_curve": [
+    [
+      "2026-05-27 00:00:00",
+      5000000
+    ]
+  ]
+}
