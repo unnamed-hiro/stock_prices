@@ -1,0 +1,29 @@
+{
+  "date": "2026-05-28",
+  "strategy": "ensemble",
+  "starting_equity": 5000000,
+  "ending_equity": 4999122.5615,
+  "cash": 4560622.5615,
+  "n_positions": 1,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "8154.T",
+      "action": "buy",
+      "confidence": 0.4291874244546972,
+      "reason": "合議buy 2/3 [technical:buy(0.75), fundamental:buy(0.77)]"
+    }
+  ],
+  "executed_buys": [
+    {
+      "ticker": "8154.T",
+      "price": 4385.0,
+      "shares": 100,
+      "cost": 438500.0,
+      "reason": "合議buy 2/3 [technical:buy(0.75), fundamental:buy(0.77)]",
+      "confidence": 0.4291874244546972
+    }
+  ],
+  "executed_sells": [],
+  "skipped": []
+}
