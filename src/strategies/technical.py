@@ -23,6 +23,10 @@ class TechnicalStrategy(Strategy):
         self.rsi_oversold = self.params.get("rsi_oversold", 30)
         self.rsi_overbought = self.params.get("rsi_overbought", 70)
         self.volume_ratio_min = self.params.get("volume_ratio_min", 1.2)
+        # entry_mode:
+        #   "trend" (デフォルト) = 上昇トレンド中(短期MA>長期MA)ならエントリー → 資金稼働率が上がる
+        #   "cross"            = 厳密なゴールデンクロスの瞬間のみ(旧来の挙動・取引が極端に少ない)
+        self.entry_mode = self.params.get("entry_mode", "trend")
 
     def warmup_days(self) -> int:
         return max(self.long_ma, self.rsi_period) + 5
@@ -51,14 +55,28 @@ class TechnicalStrategy(Strategy):
 
             golden_cross = s_prev <= l_prev and s_now > l_now
             dead_cross = s_prev >= l_prev and s_now < l_now
+            uptrend = s_now > l_now  # 短期MAが長期MAの上 = 上昇トレンド継続
 
             if ticker in held_tickers:
                 if dead_cross or rsi_now > self.rsi_overbought:
                     signals.append(Signal(ticker, "sell", confidence=0.7,
                                            reason=f"dead_cross={dead_cross}, rsi={rsi_now:.1f}"))
             else:
-                if golden_cross and rsi_now < self.rsi_overbought and vol_ratio >= self.volume_ratio_min:
-                    conf = min(1.0, (self.rsi_overbought - rsi_now) / 40 + 0.3)
-                    signals.append(Signal(ticker, "buy", confidence=conf,
-                                           reason=f"golden_cross, rsi={rsi_now:.1f}, vol×{vol_ratio:.1f}"))
+                if self.entry_mode == "cross":
+                    # 旧来: ゴールデンクロスの瞬間 + 出来高急増のみ (発火が稀 → 資金稼働率が低い)
+                    if golden_cross and rsi_now < self.rsi_overbought and vol_ratio >= self.volume_ratio_min:
+                        conf = min(1.0, (self.rsi_overbought - rsi_now) / 40 + 0.3)
+                        signals.append(Signal(ticker, "buy", confidence=conf,
+                                               reason=f"golden_cross, rsi={rsi_now:.1f}, vol×{vol_ratio:.1f}"))
+                else:
+                    # trend: 上昇トレンド中で買われすぎでなければ参加。
+                    # クロス直後や出来高を伴う日は信頼度を上乗せして優先的に選ばれるようにする。
+                    if uptrend and rsi_now < self.rsi_overbought:
+                        conf = min(1.0, (self.rsi_overbought - rsi_now) / 50 + 0.25)
+                        if golden_cross:
+                            conf = min(1.0, conf + 0.2)
+                        if vol_ratio >= self.volume_ratio_min:
+                            conf = min(1.0, conf + 0.1)
+                        signals.append(Signal(ticker, "buy", confidence=conf,
+                                               reason=f"uptrend(5MA>25MA), rsi={rsi_now:.1f}, vol×{vol_ratio:.1f}"))
         return signals

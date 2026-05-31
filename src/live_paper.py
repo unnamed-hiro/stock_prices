@@ -91,10 +91,12 @@ def reset_state():
         p.unlink()
 
 
-def _size_position(pf: Portfolio, price: float, pct: float, reserve_pct: float) -> int:
-    base = pf.initial_capital
+def _size_position(pf: Portfolio, price: float, pct: float, reserve_pct: float,
+                   base_equity: float | None = None) -> int:
+    # base_equity を渡せば「現在の総資産」基準 (複利)、無ければ初期資金基準
+    base = base_equity if base_equity is not None else pf.initial_capital
     target = base * pct
-    available = pf.cash - base * reserve_pct
+    available = pf.cash - pf.initial_capital * reserve_pct
     budget = min(target, available)
     if budget <= 0 or price * 100 > budget:
         return 0
@@ -208,6 +210,7 @@ def run_one_day(
         [s for s in signals if s.action == "buy" and s.ticker not in pf.positions],
         key=lambda x: -x.confidence,
     )
+    base_equity = pf.total_equity(prices) if getattr(risk, "size_on_equity", True) else None
     for s in buys:
         if len(pf.positions) >= config.universe.max_positions:
             report.skipped.append({"ticker": s.ticker, "reason": "max_positions上限"})
@@ -216,7 +219,8 @@ def run_one_day(
         if px is None:
             report.skipped.append({"ticker": s.ticker, "reason": "価格データなし"})
             continue
-        shares = _size_position(pf, px, risk.position_size_pct, risk.min_cash_reserve_pct)
+        shares = _size_position(pf, px, risk.position_size_pct,
+                                risk.min_cash_reserve_pct, base_equity)
         if shares <= 0:
             report.skipped.append({"ticker": s.ticker, "reason": "資金不足/最小単元"})
             continue

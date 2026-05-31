@@ -44,10 +44,12 @@ def _size_position(
     price: float,
     pct_per_position: float,
     min_cash_reserve_pct: float,
+    base_equity: float | None = None,
 ) -> int:
-    base = portfolio.initial_capital
+    # base_equity を渡せば「現在の総資産」基準 (複利)、無ければ初期資金基準
+    base = base_equity if base_equity is not None else portfolio.initial_capital
     target_yen = base * pct_per_position
-    available = portfolio.cash - base * min_cash_reserve_pct
+    available = portfolio.cash - portfolio.initial_capital * min_cash_reserve_pct
     budget = min(target_yen, available)
     if budget <= 0 or price <= 0:
         return 0
@@ -91,13 +93,15 @@ def run_backtest(
 
         buys = sorted([s for s in signals if s.action == "buy" and s.ticker not in pf.positions],
                       key=lambda x: -x.confidence)
+        base_equity = pf.total_equity(prices) if getattr(risk, "size_on_equity", True) else None
         for s in buys:
             if len(pf.positions) >= univ_max:
                 break
             px = prices.get(s.ticker)
             if px is None:
                 continue
-            shares = _size_position(pf, px, risk.position_size_pct, risk.min_cash_reserve_pct)
+            shares = _size_position(pf, px, risk.position_size_pct,
+                                    risk.min_cash_reserve_pct, base_equity)
             if shares > 0:
                 pf.buy(s.ticker, px, shares, date)
 
