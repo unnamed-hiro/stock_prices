@@ -1,0 +1,27 @@
+{
+  "date": "2026-06-04",
+  "strategy": "ensemble",
+  "starting_equity": 5058622.5615,
+  "ending_equity": 5057627.0594999995,
+  "cash": 5057627.0594999995,
+  "n_positions": 0,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "8154.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    }
+  ],
+  "executed_buys": [],
+  "executed_sells": [
+    {
+      "ticker": "8154.T",
+      "price": 4980.0,
+      "return_pct": 13.455529647091808,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    }
+  ],
+  "skipped": []
+}
