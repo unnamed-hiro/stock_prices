@@ -1,0 +1,43 @@
+{
+  "date": "2026-06-08",
+  "strategy": "ensemble",
+  "starting_equity": 5057627.0594999995,
+  "ending_equity": 5056308.0002999995,
+  "cash": 4397108.0002999995,
+  "n_positions": 2,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "9989.T",
+      "action": "buy",
+      "confidence": 0.3518123985185185,
+      "reason": "合議buy 2/3 [technical:buy(0.60), fundamental:buy(0.65)]"
+    },
+    {
+      "ticker": "2670.T",
+      "action": "buy",
+      "confidence": 0.39585508242656103,
+      "reason": "合議buy 2/3 [technical:buy(0.73), fundamental:buy(0.65)]"
+    }
+  ],
+  "executed_buys": [
+    {
+      "ticker": "2670.T",
+      "price": 2717.0,
+      "shares": 100,
+      "cost": 271700.0,
+      "reason": "合議buy 2/3 [technical:buy(0.73), fundamental:buy(0.65)]",
+      "confidence": 0.39585508242656103
+    },
+    {
+      "ticker": "9989.T",
+      "price": 3875.0,
+      "shares": 100,
+      "cost": 387500.0,
+      "reason": "合議buy 2/3 [technical:buy(0.60), fundamental:buy(0.65)]",
+      "confidence": 0.3518123985185185
+    }
+  ],
+  "executed_sells": [],
+  "skipped": []
+}
