@@ -1,0 +1,29 @@
+{
+  "date": "2026-06-09",
+  "strategy": "ensemble",
+  "starting_equity": 5055808.0002999995,
+  "ending_equity": 5055004.798899999,
+  "cash": 3994904.7988999994,
+  "n_positions": 3,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "2613.T",
+      "action": "buy",
+      "confidence": 0.36868638573540485,
+      "reason": "合議buy 2/3 [technical:buy(0.67), fundamental:buy(0.63)]"
+    }
+  ],
+  "executed_buys": [
+    {
+      "ticker": "2613.T",
+      "price": 2007.0,
+      "shares": 200,
+      "cost": 401400.0,
+      "reason": "合議buy 2/3 [technical:buy(0.67), fundamental:buy(0.63)]",
+      "confidence": 0.36868638573540485
+    }
+  ],
+  "executed_sells": [],
+  "skipped": []
+}
