@@ -1,0 +1,29 @@
+{
+  "date": "2026-06-15",
+  "strategy": "ensemble",
+  "starting_equity": 5053207.4054,
+  "ending_equity": 5052605.1044,
+  "cash": 3297355.1043999996,
+  "n_positions": 5,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "9202.T",
+      "action": "buy",
+      "confidence": 0.37114593953172753,
+      "reason": "合議buy 2/3 [technical:buy(0.57), fundamental:buy(0.78)]"
+    }
+  ],
+  "executed_buys": [
+    {
+      "ticker": "9202.T",
+      "price": 3010.0,
+      "shares": 100,
+      "cost": 301000.0,
+      "reason": "合議buy 2/3 [technical:buy(0.57), fundamental:buy(0.78)]",
+      "confidence": 0.37114593953172753
+    }
+  ],
+  "executed_sells": [],
+  "skipped": []
+}
