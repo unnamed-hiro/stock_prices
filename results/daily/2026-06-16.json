@@ -1,0 +1,13 @@
+{
+  "date": "2026-06-16",
+  "strategy": "ensemble",
+  "starting_equity": 5045005.1044,
+  "ending_equity": 5045005.1044,
+  "cash": 3297355.1043999996,
+  "n_positions": 5,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": []
+}
