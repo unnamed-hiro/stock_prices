@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-17",
+  "strategy": "ensemble",
+  "starting_equity": 5044905.1044,
+  "ending_equity": 5043904.6044,
+  "cash": 2796354.6043999996,
+  "n_positions": 6,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "4471.T",
+      "action": "buy",
+      "confidence": 0.4154044038752293,
+      "reason": "合議buy 2/3 [technical:buy(0.70), fundamental:buy(0.78)]"
+    },
+    {
+      "ticker": "7282.T",
+      "action": "buy",
+      "confidence": 0.3488698579508791,
+      "reason": "合議buy 2/3 [technical:buy(0.53), fundamental:buy(0.74)]"
+    }
+  ],
+  "executed_buys": [
+    {
+      "ticker": "7282.T",
+      "price": 5000.0,
+      "shares": 100,
+      "cost": 500000.0,
+      "reason": "合議buy 2/3 [technical:buy(0.53), fundamental:buy(0.74)]",
+      "confidence": 0.3488698579508791
+    }
+  ],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "4471.T",
+      "reason": "資金不足/最小単元"
+    }
+  ]
+}
