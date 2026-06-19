@@ -16,13 +16,14 @@ universe:
   max_positions: 20             # 同時保有可能な最大銘柄数
 
 risk:
-  position_size_pct: 0.10       # 1銘柄あたりの資産配分 (10%) — 5M×10%=50万円が1銘柄上限
-  stop_loss_pct: 0.05           # 損切りライン (-5%)
-  take_profit_pct: 0.15         # 利確ライン (+15%)
-  max_holding_days: 60          # 最大保有日数
+  position_size_pct: 0.10       # 1銘柄あたりの資産配分 (10%) — 現在資産の10%を1銘柄に
+  stop_loss_pct: 0.08           # 損切りライン (-8%) — 浅い損切りでの振り落とされを軽減
+  take_profit_pct: 0.30         # 利確ライン (+30%) — 早すぎる利確をやめ利を伸ばす
+  max_holding_days: 120         # 最大保有日数 — トレンドに長く乗る
   min_cash_reserve_pct: 0.10    # 最低現金残高 (10%)
+  size_on_equity: true          # true=投資額を現在資産基準で算出(複利) / false=初期資金固定
 
-# AIモデル選択: technical / ml / llm
+# AIモデル選択: technical / ml / fundamental / llm / ensemble
 strategy:
   name: "technical"
 
@@ -32,7 +33,8 @@ strategy:
     rsi_period: 14
     rsi_oversold: 30            # この値以下で買いシグナル候補
     rsi_overbought: 70          # この値以上で売りシグナル候補
-    volume_ratio_min: 1.2       # 出来高が直近平均の何倍以上で有効
+    volume_ratio_min: 1.2       # 出来高が直近平均の何倍以上で有効 (trendモードでは信頼度加点に使用)
+    entry_mode: "trend"         # trend=上昇トレンド中ならエントリー(資金稼働↑) / cross=厳密クロスのみ(旧来)
 
   ml:
     model_type: "lightgbm"

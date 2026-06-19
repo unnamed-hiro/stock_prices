@@ -26,6 +26,9 @@ class RiskConfig:
     take_profit_pct: float
     max_holding_days: int
     min_cash_reserve_pct: float
+    # True: 1銘柄の投資額を「現在の総資産」基準で算出 → 利益が複利で乗る
+    # False: 「初期資金」基準で固定 (複利が効かない旧来の挙動)
+    size_on_equity: bool = True
 
 
 @dataclass

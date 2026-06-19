@@ -201,8 +201,10 @@ def reset_portfolio():
         STATE_PATH.unlink()
 
 
-def _size(pf: Portfolio, price: float, pct: float, reserve_pct: float) -> int:
-    target = pf.initial_capital * pct
+def _size(pf: Portfolio, price: float, pct: float, reserve_pct: float,
+          base_equity: float | None = None) -> int:
+    base = base_equity if base_equity is not None else pf.initial_capital
+    target = base * pct
     available = pf.cash - pf.initial_capital * reserve_pct
     budget = min(target, available)
     if budget <= 0 or price * 100 > budget:
@@ -294,10 +296,12 @@ def execute_tick(
         [x for x in sigs if x.action == "buy" and x.ticker not in pf.positions],
         key=lambda x: -x.confidence,
     )
+    base_equity = pf.total_equity(prices) if getattr(risk, "size_on_equity", True) else None
     for s in buys:
         if len(pf.positions) >= config.universe.max_positions:
             break
-        shares = _size(pf, s.price, risk.position_size_pct, risk.min_cash_reserve_pct)
+        shares = _size(pf, s.price, risk.position_size_pct,
+                       risk.min_cash_reserve_pct, base_equity)
         if shares <= 0:
             continue
         if not dry_run and pf.buy(s.ticker, s.price, shares, ts):
