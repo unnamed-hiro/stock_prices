@@ -158,6 +158,7 @@ def load_portfolio(config: AppConfig) -> Portfolio:
             ticker=p["ticker"], shares=p["shares"],
             entry_price=p["entry_price"],
             entry_date=pd.Timestamp(p["entry_date"]),
+            peak_price=p.get("peak_price", p["entry_price"]),
         )
         for t, p in data["positions"].items()
     }
@@ -182,7 +183,8 @@ def save_portfolio(pf: Portfolio):
         "positions": {
             t: {"ticker": p.ticker, "shares": p.shares,
                 "entry_price": p.entry_price,
-                "entry_date": str(p.entry_date)}
+                "entry_date": str(p.entry_date),
+                "peak_price": p.peak_price}
             for t, p in pf.positions.items()
         },
         "trades": [
@@ -246,15 +248,23 @@ def execute_tick(
     )
 
     risk = config.risk
+    trailing = getattr(risk, "trailing_stop_pct", 0.0)
     for t, pos in list(pf.positions.items()):
         px = prices.get(t)
         if px is None:
             continue
+        if px > pos.peak_price:
+            pos.peak_price = px
         ret = (px - pos.entry_price) / pos.entry_price
+        peak = pos.peak_price if pos.peak_price > 0 else pos.entry_price
+        drop_from_peak = (px - peak) / peak
         reason = None
         if ret <= -risk.stop_loss_pct:
             reason = f"stop_loss ({ret*100:+.1f}%)"
-        elif ret >= risk.take_profit_pct:
+        elif trailing > 0 and ret > 0 and drop_from_peak <= -trailing:
+            reason = f"trailing_stop (peak比{drop_from_peak*100:+.1f}%)"
+        elif risk.take_profit_pct > 0 and ret >= risk.take_profit_pct:
+            # take_profit_pct=0 は「固定利確なし」— ret>=0 で即売却しないようガード必須
             reason = f"take_profit ({ret*100:+.1f}%)"
         if reason:
             entry_px = pos.entry_price
@@ -281,7 +291,10 @@ def execute_tick(
         for s in sigs
     ]
 
-    for s in [x for x in sigs if x.action == "sell" and x.ticker in pf.positions]:
+    # honor_strategy_sell=False の場合、戦略売りは無視しリスク決済(トレーリング等)に委ねる
+    honor_sell = getattr(risk, "honor_strategy_sell", True)
+    ai_sells = [x for x in sigs if x.action == "sell" and x.ticker in pf.positions] if honor_sell else []
+    for s in ai_sells:
         pos = pf.positions[s.ticker]
         ret = (s.price - pos.entry_price) / pos.entry_price
         shares_before = pos.shares

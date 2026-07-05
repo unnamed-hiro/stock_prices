@@ -53,7 +53,8 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # results/ と data/state/ は .gitignore 対象だが、結果蓄積のため強制追加
-          git add -f results/daily data/state/portfolio.json 2>/dev/null || true
+          # pending_orders.json は「翌営業日の始値で約定する注文」— 次回実行に必須
+          git add -f results/daily data/state 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "変更なし (休場日 or 処理済み)。コミットをスキップ。"
           else

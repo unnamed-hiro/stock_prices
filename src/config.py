@@ -11,6 +11,8 @@ class SimulationConfig:
     start_date: str
     end_date: str
     benchmark: str
+    # 約定タイミング: "next_open"(既定/現実的)=翌営業日始値, "close"(旧来/先読みあり)=当日終値
+    execution: str = "next_open"
 
 
 @dataclass
@@ -29,6 +31,12 @@ class RiskConfig:
     # True: 1銘柄の投資額を「現在の総資産」基準で算出 → 利益が複利で乗る
     # False: 「初期資金」基準で固定 (複利が効かない旧来の挙動)
     size_on_equity: bool = True
+    # トレーリングストップ: 取得後の最高値からこの率だけ下落したら手仕舞い (利を伸ばす)。
+    # 0 で無効。利が乗ってから作動 (含み益がある時のみ)。
+    trailing_stop_pct: float = 0.0
+    # False: 上昇トレンド継続中は戦略の売りシグナルを無視し、リスク決済(トレーリング等)に委ねる。
+    #        過剰売買(churn)を抑え、トレンドに乗り続ける。
+    honor_strategy_sell: bool = True
 
 
 @dataclass

@@ -18,10 +18,12 @@ universe:
 risk:
   position_size_pct: 0.10       # 1銘柄あたりの資産配分 (10%) — 現在資産の10%を1銘柄に
   stop_loss_pct: 0.08           # 損切りライン (-8%) — 浅い損切りでの振り落とされを軽減
-  take_profit_pct: 0.30         # 利確ライン (+30%) — 早すぎる利確をやめ利を伸ばす
-  max_holding_days: 120         # 最大保有日数 — トレンドに長く乗る
+  take_profit_pct: 0.0          # 固定利確は無効(0)。トレーリングストップで利を伸ばす
+  trailing_stop_pct: 0.15       # 取得後の最高値から-15%で利益確定 (勝ち馬に乗り続ける)
+  max_holding_days: 250         # 最大保有日数 — トレンドに長く乗る
   min_cash_reserve_pct: 0.10    # 最低現金残高 (10%)
   size_on_equity: true          # true=投資額を現在資産基準で算出(複利) / false=初期資金固定
+  honor_strategy_sell: false    # false=上昇継続中は戦略売りを無視しトレーリングに委ねる(過剰売買抑制)
 
 # AIモデル選択: technical / ml / fundamental / llm / ensemble
 strategy:
