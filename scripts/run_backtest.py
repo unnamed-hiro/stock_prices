@@ -58,6 +58,21 @@ def main():
     success = evaluate_success(m, cfg.success_criteria)
     print(format_report(m, success))
 
+    # ベンチマーク(全銘柄バイ&ホールド)との比較 = α (市場に勝ったか)
+    import pandas as pd
+    from src.backtester import compute_benchmark
+    bench = compute_benchmark(price_data, pd.Timestamp(cfg.simulation.start_date),
+                              pd.Timestamp(cfg.simulation.end_date),
+                              cfg.simulation.initial_capital)
+    alpha = m.total_return_pct - bench["total_return_pct"]
+    print("-" * 60)
+    print("  市場比較 (α = 戦略が市場をどれだけ上回ったか)")
+    print(f"  戦略リターン       : {m.total_return_pct:>8.2f} %")
+    print(f"  市場(バイ&ホールド): {bench['total_return_pct']:>8.2f} %  ({bench.get('n_tickers',0)}銘柄等金額)")
+    print(f"  超過リターン (α)   : {alpha:>8.2f} %  "
+          f"{'★市場に勝利' if alpha > 0 else '×市場に負け (単純保有の方が良い)'}")
+    print("=" * 60)
+
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     from dataclasses import asdict
@@ -65,6 +80,7 @@ def main():
         json.dump({
             "strategy": cfg.strategy_name,
             "metrics": asdict(m),
+            "benchmark": {"total_return_pct": bench["total_return_pct"], "alpha_pct": alpha},
             "success": {k: {"pass": v[0], "detail": v[1]} for k, v in success.items()},
             "equity_curve": [(str(d), v) for d, v in pf.equity_curve],
             "trades": [

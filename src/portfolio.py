@@ -8,6 +8,7 @@ class Position:
     shares: int
     entry_price: float
     entry_date: pd.Timestamp
+    peak_price: float = 0.0   # 取得後の最高値 (トレーリングストップ用)
 
 
 @dataclass
@@ -53,7 +54,7 @@ class Portfolio:
             pos.entry_price = (pos.entry_price * pos.shares + exec_price * shares) / new_shares
             pos.shares = new_shares
         else:
-            self.positions[ticker] = Position(ticker, shares, exec_price, date)
+            self.positions[ticker] = Position(ticker, shares, exec_price, date, peak_price=exec_price)
         self.trades.append(Trade(ticker, "buy", shares, exec_price, date))
         return True
 

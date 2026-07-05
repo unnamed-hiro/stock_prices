@@ -46,6 +46,7 @@ def load_or_init(config: AppConfig) -> Portfolio:
             shares=p["shares"],
             entry_price=p["entry_price"],
             entry_date=pd.Timestamp(p["entry_date"]),
+            peak_price=p.get("peak_price", p["entry_price"]),
         )
         for t, p in data["positions"].items()
     }
@@ -70,7 +71,8 @@ def save_state(pf: Portfolio):
         "cash": pf.cash,
         "positions": {
             t: {"ticker": p.ticker, "shares": p.shares,
-                "entry_price": p.entry_price, "entry_date": str(p.entry_date)}
+                "entry_price": p.entry_price, "entry_date": str(p.entry_date),
+                "peak_price": p.peak_price}
             for t, p in pf.positions.items()
         },
         "trades": [
