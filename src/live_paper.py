@@ -164,16 +164,25 @@ def run_one_day(
     )
 
     risk = config.risk
+    trailing = getattr(risk, "trailing_stop_pct", 0.0)
     for ticker, pos in list(pf.positions.items()):
         px = prices.get(ticker)
         if px is None:
             continue
+        # 取得後最高値を更新 (トレーリングストップ用)
+        if px > pos.peak_price:
+            pos.peak_price = px
         ret = (px - pos.entry_price) / pos.entry_price
         days = (date - pos.entry_date).days
+        peak = pos.peak_price if pos.peak_price > 0 else pos.entry_price
+        drop_from_peak = (px - peak) / peak
         reason = None
         if ret <= -risk.stop_loss_pct:
             reason = f"stop_loss ({ret*100:+.1f}%)"
-        elif ret >= risk.take_profit_pct:
+        elif trailing > 0 and ret > 0 and drop_from_peak <= -trailing:
+            reason = f"trailing_stop (peak比{drop_from_peak*100:+.1f}%)"
+        elif risk.take_profit_pct > 0 and ret >= risk.take_profit_pct:
+            # take_profit_pct=0 は「固定利確なし」— ret>=0 で即売却しないようガード必須
             reason = f"take_profit ({ret*100:+.1f}%)"
         elif days >= risk.max_holding_days:
             reason = f"max_holding ({days}日)"
@@ -195,7 +204,12 @@ def run_one_day(
         for s in signals
     ]
 
-    sells = [s for s in signals if s.action == "sell" and s.ticker in held]
+    # honor_strategy_sell=False の場合、戦略の売りは無視しリスク決済(トレーリング等)に委ねる
+    # (バックテストで検証したポリシーと本番運用を一致させる)
+    if getattr(risk, "honor_strategy_sell", True):
+        sells = [s for s in signals if s.action == "sell" and s.ticker in held]
+    else:
+        sells = []
     for s in sells:
         px = prices.get(s.ticker)
         if px is None:
