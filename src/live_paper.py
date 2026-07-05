@@ -91,6 +91,7 @@ def reset_state():
     p = _state_path()
     if p.exists():
         p.unlink()
+    clear_pending()
 
 
 def _size_position(pf: Portfolio, price: float, pct: float, reserve_pct: float,
@@ -110,6 +111,44 @@ def _close_on(df: pd.DataFrame, date: pd.Timestamp) -> float | None:
     return float(sub["Close"].iloc[-1]) if len(sub) else None
 
 
+def _open_on(df: pd.DataFrame, date: pd.Timestamp) -> float | None:
+    """指定日ちょうどの始値。約定用なので当日バーが無ければ None (未約定)。"""
+    if date in df.index:
+        col = "Open" if "Open" in df.columns else "Close"
+        v = df.loc[date, col]
+        return float(v) if pd.notna(v) else None
+    return None
+
+
+def _pending_path() -> Path:
+    return STATE_DIR / "pending_orders.json"
+
+
+def load_pending() -> dict:
+    """前回の判断で持ち越された注文 {decided_on, orders:[...]} を読む"""
+    p = _pending_path()
+    if not p.exists():
+        return {"decided_on": None, "orders": []}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {"decided_on": None, "orders": []}
+
+
+def save_pending(decided_on: pd.Timestamp, orders: list[dict]):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    _pending_path().write_text(
+        json.dumps({"decided_on": str(decided_on.date()), "orders": orders},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8")
+
+
+def clear_pending():
+    p = _pending_path()
+    if p.exists():
+        p.unlink()
+
+
 @dataclass
 class DailyReport:
     date: str
@@ -123,6 +162,8 @@ class DailyReport:
     executed_buys: list[dict] = field(default_factory=list)
     executed_sells: list[dict] = field(default_factory=list)
     skipped: list[dict] = field(default_factory=list)
+    # next_open方式: 当日の判断で発行し翌営業日の始値で約定する予定の注文
+    planned_orders: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -137,36 +178,89 @@ class DailyReport:
             "executed_buys": self.executed_buys,
             "executed_sells": self.executed_sells,
             "skipped": self.skipped,
+            "planned_orders": self.planned_orders,
         }
 
 
-def run_one_day(
-    config: AppConfig,
-    strategy: Strategy,
+def _fill_pending_orders(
+    pf: Portfolio,
+    orders: list[dict],
     date: pd.Timestamp,
     price_data: dict[str, pd.DataFrame],
-    dry_run: bool = False,
-) -> tuple[Portfolio, DailyReport]:
-    """指定日について AI に判断させ、ペーパー口座を更新する"""
-    pf = load_or_init(config)
+    config: AppConfig,
+    report: "DailyReport",
+    dry_run: bool,
+):
+    """前営業日に発行した注文を当日の始値で約定する (バックテスターと同じ挙動)"""
+    risk = config.risk
+    opens = {t: _open_on(df, date) for t, df in price_data.items()}
+    opens = {t: p for t, p in opens.items() if p is not None}
 
-    prices = {t: _close_on(df, date) for t, df in price_data.items()}
-    prices = {t: p for t, p in prices.items() if p is not None}
+    # 売り(決済)を先に処理して現金を確保
+    for o in [x for x in orders if x["side"] == "sell"]:
+        px = opens.get(o["ticker"])
+        if px is None or o["ticker"] not in pf.positions:
+            report.skipped.append({"ticker": o["ticker"],
+                                   "reason": "売り注文: 当日始値なし/保有なし"})
+            continue
+        pos = pf.positions[o["ticker"]]
+        ret = (px - pos.entry_price) / pos.entry_price
+        entry_px = pos.entry_price
+        entry_dt = str(pos.entry_date.date())
+        if not dry_run and pf.sell(o["ticker"], px, date):
+            rec = {"ticker": o["ticker"], "reason": o.get("reason", ""),
+                   "entry_price": entry_px, "exit_price": px,
+                   "entry_date": entry_dt, "return_pct": ret * 100}
+            if o.get("kind") == "risk":
+                report.exits.append(rec)
+            else:
+                report.executed_sells.append(
+                    {"ticker": o["ticker"], "price": px,
+                     "return_pct": ret * 100, "reason": o.get("reason", "")})
 
-    starting_eq = pf.total_equity(prices)
-    report = DailyReport(
-        date=str(date.date()),
-        strategy=strategy.name,
-        starting_equity=starting_eq,
-        ending_equity=0,
-        cash=pf.cash,
-        n_positions=len(pf.positions),
-    )
+    # 買いは信頼度順、サイズは約定時の資産・現金で計算
+    buys = sorted([x for x in orders if x["side"] == "buy"],
+                  key=lambda x: -x.get("confidence", 0))
+    base_equity = pf.total_equity(opens) if getattr(risk, "size_on_equity", True) else None
+    for o in buys:
+        if o["ticker"] in pf.positions:
+            continue
+        if len(pf.positions) >= config.universe.max_positions:
+            report.skipped.append({"ticker": o["ticker"], "reason": "max_positions上限"})
+            continue
+        px = opens.get(o["ticker"])
+        if px is None:
+            report.skipped.append({"ticker": o["ticker"], "reason": "買い注文: 当日始値なし"})
+            continue
+        shares = _size_position(pf, px, risk.position_size_pct,
+                                risk.min_cash_reserve_pct, base_equity)
+        if shares <= 0:
+            report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
+            continue
+        if not dry_run and pf.buy(o["ticker"], px, shares, date):
+            report.executed_buys.append({
+                "ticker": o["ticker"], "price": px, "shares": shares,
+                "cost": px * shares, "reason": o.get("reason", ""),
+                "confidence": o.get("confidence", 0),
+            })
 
+
+def _decide_orders(
+    pf: Portfolio,
+    date: pd.Timestamp,
+    closes: dict[str, float],
+    price_data: dict[str, pd.DataFrame],
+    strategy: Strategy,
+    config: AppConfig,
+    report: "DailyReport",
+) -> list[dict]:
+    """当日終値までの情報でリスク決済+戦略シグナルを判断し、注文リストを返す"""
     risk = config.risk
     trailing = getattr(risk, "trailing_stop_pct", 0.0)
+    orders: list[dict] = []
+
     for ticker, pos in list(pf.positions.items()):
-        px = prices.get(ticker)
+        px = closes.get(ticker)
         if px is None:
             continue
         # 取得後最高値を更新 (トレーリングストップ用)
@@ -187,15 +281,10 @@ def run_one_day(
         elif days >= risk.max_holding_days:
             reason = f"max_holding ({days}日)"
         if reason:
-            entry_px = pos.entry_price
-            entry_dt = str(pos.entry_date.date())
-            if not dry_run and pf.sell(ticker, px, date):
-                report.exits.append({
-                    "ticker": ticker, "reason": reason,
-                    "entry_price": entry_px, "exit_price": px,
-                    "entry_date": entry_dt, "return_pct": ret * 100,
-                })
+            orders.append({"side": "sell", "ticker": ticker,
+                           "kind": "risk", "reason": reason})
 
+    exiting = {o["ticker"] for o in orders}
     held = set(pf.positions.keys())
     signals = strategy.generate_signals(date, price_data, held)
     report.ai_signals = [
@@ -205,55 +294,133 @@ def run_one_day(
     ]
 
     # honor_strategy_sell=False の場合、戦略の売りは無視しリスク決済(トレーリング等)に委ねる
-    # (バックテストで検証したポリシーと本番運用を一致させる)
-    if getattr(risk, "honor_strategy_sell", True):
-        sells = [s for s in signals if s.action == "sell" and s.ticker in held]
-    else:
-        sells = []
-    for s in sells:
-        px = prices.get(s.ticker)
-        if px is None:
-            continue
-        pos = pf.positions[s.ticker]
-        ret = (px - pos.entry_price) / pos.entry_price
-        if not dry_run and pf.sell(s.ticker, px, date):
-            report.executed_sells.append({
-                "ticker": s.ticker, "price": px,
-                "return_pct": ret * 100, "reason": s.reason,
-            })
+    honor_sell = getattr(risk, "honor_strategy_sell", True)
+    for s in signals:
+        if s.action == "sell" and s.ticker in held and s.ticker not in exiting:
+            if honor_sell:
+                orders.append({"side": "sell", "ticker": s.ticker,
+                               "kind": "ai", "reason": s.reason})
+        elif s.action == "buy" and s.ticker not in held:
+            orders.append({"side": "buy", "ticker": s.ticker,
+                           "confidence": s.confidence, "reason": s.reason})
+    return orders
 
-    buys = sorted(
-        [s for s in signals if s.action == "buy" and s.ticker not in pf.positions],
-        key=lambda x: -x.confidence,
+
+def run_one_day(
+    config: AppConfig,
+    strategy: Strategy,
+    date: pd.Timestamp,
+    price_data: dict[str, pd.DataFrame],
+    dry_run: bool = False,
+) -> tuple[Portfolio, DailyReport]:
+    """指定日について AI に判断させ、ペーパー口座を更新する。
+
+    execution="next_open" (既定): 前回判断の注文を当日始値で約定 → 当日終値で
+    新たに判断し注文を保存 (翌営業日の実行時に約定)。バックテスターと同じ、
+    先読みのない現実的な約定タイミング。
+    execution="close" (旧来): 当日終値で判断し同じ終値で即約定 (先読みあり)。
+    """
+    pf = load_or_init(config)
+    execution = getattr(config.simulation, "execution", "next_open")
+
+    closes = {t: _close_on(df, date) for t, df in price_data.items()}
+    closes = {t: p for t, p in closes.items() if p is not None}
+
+    starting_eq = pf.total_equity(closes)
+    report = DailyReport(
+        date=str(date.date()),
+        strategy=strategy.name,
+        starting_equity=starting_eq,
+        ending_equity=0,
+        cash=pf.cash,
+        n_positions=len(pf.positions),
     )
-    base_equity = pf.total_equity(prices) if getattr(risk, "size_on_equity", True) else None
-    for s in buys:
-        if len(pf.positions) >= config.universe.max_positions:
-            report.skipped.append({"ticker": s.ticker, "reason": "max_positions上限"})
+
+    # 1) 前営業日に発行した注文を当日の始値で約定
+    if execution == "next_open":
+        pending = load_pending()
+        decided_on = pending.get("decided_on")
+        if pending["orders"] and decided_on and pd.Timestamp(decided_on) < date:
+            _fill_pending_orders(pf, pending["orders"], date, price_data,
+                                 config, report, dry_run)
+            if not dry_run:
+                clear_pending()
+
+    # 2) 当日終値までの情報で判断
+    orders = _decide_orders(pf, date, closes, price_data, strategy, config, report)
+
+    if execution == "close":
+        # 旧来: 当日終値で即約定
+        _fill_orders_at_close(pf, orders, date, closes, config, report, dry_run)
+    else:
+        # 既定: 注文を保存し翌営業日の始値で約定
+        report.planned_orders = orders
+        if not dry_run:
+            save_pending(date, orders)
+
+    if not dry_run:
+        pf.record_equity(date, closes)
+
+    report.ending_equity = pf.total_equity(closes)
+    report.cash = pf.cash
+    report.n_positions = len(pf.positions)
+    return pf, report
+
+
+def _fill_orders_at_close(
+    pf: Portfolio,
+    orders: list[dict],
+    date: pd.Timestamp,
+    closes: dict[str, float],
+    config: AppConfig,
+    report: "DailyReport",
+    dry_run: bool,
+):
+    """旧来モード: 当日終値で即約定 (先読みあり・後方互換用)"""
+    risk = config.risk
+    for o in [x for x in orders if x["side"] == "sell"]:
+        px = closes.get(o["ticker"])
+        if px is None or o["ticker"] not in pf.positions:
             continue
-        px = prices.get(s.ticker)
+        pos = pf.positions[o["ticker"]]
+        ret = (px - pos.entry_price) / pos.entry_price
+        entry_px = pos.entry_price
+        entry_dt = str(pos.entry_date.date())
+        if not dry_run and pf.sell(o["ticker"], px, date):
+            if o.get("kind") == "risk":
+                report.exits.append({
+                    "ticker": o["ticker"], "reason": o.get("reason", ""),
+                    "entry_price": entry_px, "exit_price": px,
+                    "entry_date": entry_dt, "return_pct": ret * 100})
+            else:
+                report.executed_sells.append(
+                    {"ticker": o["ticker"], "price": px,
+                     "return_pct": ret * 100, "reason": o.get("reason", "")})
+
+    buys = sorted([x for x in orders if x["side"] == "buy"],
+                  key=lambda x: -x.get("confidence", 0))
+    base_equity = pf.total_equity(closes) if getattr(risk, "size_on_equity", True) else None
+    for o in buys:
+        if o["ticker"] in pf.positions:
+            continue
+        if len(pf.positions) >= config.universe.max_positions:
+            report.skipped.append({"ticker": o["ticker"], "reason": "max_positions上限"})
+            continue
+        px = closes.get(o["ticker"])
         if px is None:
-            report.skipped.append({"ticker": s.ticker, "reason": "価格データなし"})
+            report.skipped.append({"ticker": o["ticker"], "reason": "価格データなし"})
             continue
         shares = _size_position(pf, px, risk.position_size_pct,
                                 risk.min_cash_reserve_pct, base_equity)
         if shares <= 0:
-            report.skipped.append({"ticker": s.ticker, "reason": "資金不足/最小単元"})
+            report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
             continue
-        if not dry_run and pf.buy(s.ticker, px, shares, date):
+        if not dry_run and pf.buy(o["ticker"], px, shares, date):
             report.executed_buys.append({
-                "ticker": s.ticker, "price": px, "shares": shares,
-                "cost": px * shares, "reason": s.reason,
-                "confidence": s.confidence,
+                "ticker": o["ticker"], "price": px, "shares": shares,
+                "cost": px * shares, "reason": o.get("reason", ""),
+                "confidence": o.get("confidence", 0),
             })
-
-    if not dry_run:
-        pf.record_equity(date, prices)
-
-    report.ending_equity = pf.total_equity(prices)
-    report.cash = pf.cash
-    report.n_positions = len(pf.positions)
-    return pf, report
 
 
 def save_daily_report(report: DailyReport):
@@ -301,5 +468,15 @@ def format_report(report: DailyReport) -> str:
             lines.append(f"    {s['ticker']}: {s['reason']}")
         if len(report.skipped) > 5:
             lines.append(f"    ...他 {len(report.skipped) - 5}件")
+    if report.planned_orders:
+        n_buy = sum(1 for o in report.planned_orders if o["side"] == "buy")
+        n_sell = sum(1 for o in report.planned_orders if o["side"] == "sell")
+        lines.append("-" * 66)
+        lines.append(f"  翌営業日の始値で約定予定の注文 (買{n_buy} / 売{n_sell})")
+        for o in report.planned_orders[:8]:
+            mark = "[買]" if o["side"] == "buy" else "[売]"
+            lines.append(f"    {mark} {o['ticker']}  {o.get('reason','')}")
+        if len(report.planned_orders) > 8:
+            lines.append(f"    ...他 {len(report.planned_orders) - 8}件")
     lines.append("=" * 66)
     return "\n".join(lines)

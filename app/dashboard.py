@@ -429,6 +429,36 @@ def render_run_backtest():
         run_subprocess_streaming(cmd, "バックテスト実行中...")
         st.info("結果ファイルが results/ に保存されました。サイドバーから選択してください。")
 
+    with st.expander("🔬 ウォークフォワード検証 (安定性チェック)"):
+        st.caption("期間を複数の連続ウィンドウに分割し、各ウィンドウで独立に検証します。"
+                   "特定期間だけ勝つ「まぐれ/過剰最適化」を検出できます。")
+        wf_windows = st.slider("分割ウィンドウ数", 2, 8, 4)
+        if st.button("ウォークフォワード実行", width="stretch", key="run_wf"):
+            cmd = [sys.executable, "scripts/run_walkforward.py",
+                   "--strategy", strategy, "--windows", str(wf_windows)]
+            if limit is not None:
+                cmd += ["--limit", str(limit)]
+            run_subprocess_streaming(cmd, "ウォークフォワード実行中...")
+        wf_path = Path(f"results/walkforward_{strategy}.json")
+        if wf_path.exists():
+            wf = json.loads(wf_path.read_text(encoding="utf-8"))
+            st.markdown(f"**前回の結果** — α>0 は "
+                        f"{wf['n_windows_alpha_positive']} / {wf['n_windows']} ウィンドウ、"
+                        f"最悪α {wf['worst_alpha_pct']:+.1f}%")
+            wdf = pd.DataFrame(wf["windows"])
+            st.dataframe(
+                wdf[["start", "end", "return_pct", "benchmark_pct",
+                     "alpha_pct", "sharpe", "n_sells"]].style.format(
+                    {"return_pct": "{:+.1f}", "benchmark_pct": "{:+.1f}",
+                     "alpha_pct": "{:+.1f}", "sharpe": "{:.2f}"}),
+                width="stretch", hide_index=True)
+            if wf["consistent"]:
+                st.success("全ウィンドウで市場超過 — 安定性あり (将来の保証ではない)")
+            elif wf["n_windows_alpha_positive"] == 0:
+                st.error("全ウィンドウで市場に負け — この戦略に優位性は無い")
+            else:
+                st.warning("勝敗が期間依存 — 過剰最適化の可能性。採用は慎重に")
+
 
 def render_run_live():
     st.subheader("AI日次判断 (1日分)")

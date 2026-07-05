@@ -69,10 +69,11 @@ def test_live_tp_zero_does_not_liquidate_winners(tmp_path, monkeypatch):
     assert report.exits == [], f"tp=0で勝ちポジションを即決済した: {report.exits}"
 
 
-def test_live_trailing_stop_fires(tmp_path, monkeypatch):
-    """日次ライブでもトレーリングストップが機能する"""
+def test_live_trailing_stop_planned_as_next_open_order(tmp_path, monkeypatch):
+    """日次ライブ(next_open)でトレーリングストップが翌日約定注文として発行される"""
     from src import live_paper
     monkeypatch.setattr(live_paper, "_state_path", lambda: tmp_path / "pf.json")
+    monkeypatch.setattr(live_paper, "_pending_path", lambda: tmp_path / "pend.json")
 
     cfg = _cfg(take_profit_pct=0.0, trailing_stop_pct=0.15,
                stop_loss_pct=0.5, max_holding_days=999)
@@ -81,16 +82,68 @@ def test_live_trailing_stop_fires(tmp_path, monkeypatch):
     pf.positions["X.T"].peak_price = 150.0  # 150まで上昇済み
     live_paper.save_state(pf)
 
-    # 150 → 120 (peak比 -20%、取得比 +20%) → トレーリング作動
+    # 150 → 120 (peak比 -20%、取得比 +20%) → トレーリング判定 → 翌日約定注文
+    ph = {"X.T": _daily_bars([100.0, 120.0])}
+    _, report = live_paper.run_one_day(cfg, NoopStrategy(), pd.Timestamp("2024-01-02"), ph)
+    assert any(o["side"] == "sell" and "trailing_stop" in o["reason"]
+               for o in report.planned_orders)
+    # 当日はまだ約定していない (翌始値約定)
+    assert report.exits == []
+
+
+def test_live_trailing_stop_fires_in_close_mode(tmp_path, monkeypatch):
+    """旧来close方式ではトレーリングが即日約定する (後方互換)"""
+    from src import live_paper
+    monkeypatch.setattr(live_paper, "_state_path", lambda: tmp_path / "pf.json")
+    monkeypatch.setattr(live_paper, "_pending_path", lambda: tmp_path / "pend.json")
+
+    cfg = _cfg(take_profit_pct=0.0, trailing_stop_pct=0.15,
+               stop_loss_pct=0.5, max_holding_days=999)
+    cfg.simulation.execution = "close"
+    pf = live_paper.init_portfolio(cfg)
+    pf.buy("X.T", 100.0, 100, pd.Timestamp("2024-01-01"))
+    pf.positions["X.T"].peak_price = 150.0
+    live_paper.save_state(pf)
+
     ph = {"X.T": _daily_bars([100.0, 120.0])}
     _, report = live_paper.run_one_day(cfg, NoopStrategy(), pd.Timestamp("2024-01-02"), ph)
     assert any("trailing_stop" in e["reason"] for e in report.exits)
 
 
-def test_live_honor_strategy_sell_false_ignores_ai_sells(tmp_path, monkeypatch):
-    """honor_strategy_sell=False なら戦略の売りシグナルを実行しない"""
+def test_live_pending_order_fills_at_next_open(tmp_path, monkeypatch):
+    """前日に発行した買い注文が当日の始値で約定する (バックテスターと同じ挙動)"""
     from src import live_paper
     monkeypatch.setattr(live_paper, "_state_path", lambda: tmp_path / "pf.json")
+    monkeypatch.setattr(live_paper, "_pending_path", lambda: tmp_path / "pend.json")
+
+    cfg = _cfg(take_profit_pct=0.0, trailing_stop_pct=0.15,
+               stop_loss_pct=0.5, max_holding_days=999,
+               position_size_pct=0.5, min_cash_reserve_pct=0.0)
+    live_paper.reset_state()
+    # 前日(1/1)判断の買い注文を保存
+    live_paper.save_pending(pd.Timestamp("2024-01-01"),
+                            [{"side": "buy", "ticker": "X.T",
+                              "confidence": 0.9, "reason": "test"}])
+
+    # 当日(1/2): Open=200, Close=210 → 約定は始値200ベース(スリッページ込み)であるべき
+    idx = pd.date_range("2024-01-01", periods=2, freq="D")
+    df = pd.DataFrame({"Open": [100.0, 200.0], "High": [100, 210],
+                       "Low": [100, 200], "Close": [100.0, 210.0],
+                       "Volume": [10_000] * 2}, index=idx)
+    _, report = live_paper.run_one_day(cfg, NoopStrategy(), pd.Timestamp("2024-01-02"),
+                                       {"X.T": df})
+    assert len(report.executed_buys) == 1
+    fill = report.executed_buys[0]["price"]
+    assert abs(fill - 200.0) < 1.0, f"始値200で約定すべきが {fill}"
+    # 約定済み注文はクリアされる
+    assert live_paper.load_pending()["orders"] == []
+
+
+def test_live_honor_strategy_sell_false_ignores_ai_sells(tmp_path, monkeypatch):
+    """honor_strategy_sell=False なら戦略の売りは注文にも計画にも入らない"""
+    from src import live_paper
+    monkeypatch.setattr(live_paper, "_state_path", lambda: tmp_path / "pf.json")
+    monkeypatch.setattr(live_paper, "_pending_path", lambda: tmp_path / "pend.json")
 
     cfg = _cfg(take_profit_pct=0.0, trailing_stop_pct=0.15,
                stop_loss_pct=0.5, max_holding_days=999, honor_strategy_sell=False)
@@ -101,12 +154,9 @@ def test_live_honor_strategy_sell_false_ignores_ai_sells(tmp_path, monkeypatch):
     ph = {"X.T": _daily_bars([100.0, 105.0])}
     _, report = live_paper.run_one_day(cfg, SellAllStrategy(), pd.Timestamp("2024-01-02"), ph)
     assert report.executed_sells == []
-    assert "X.T" in _reload_positions(tmp_path, cfg, monkeypatch)
-
-
-def _reload_positions(tmp_path, cfg, monkeypatch):
-    from src import live_paper
-    return live_paper.load_or_init(cfg).positions
+    assert not any(o["side"] == "sell" for o in report.planned_orders)
+    from src import live_paper as lp
+    assert "X.T" in lp.load_or_init(cfg).positions
 
 
 # ---- リアルタイム (realtime.execute_tick) : 準リアルタイム/本日シミュ共用 ----

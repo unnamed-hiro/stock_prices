@@ -48,6 +48,19 @@ def main():
                             use_cache=not args.no_cache)
     print(f"      取得成功: {len(price_data)} / {len(tickers)}")
 
+    # データ品質レポート (生存者バイアスの定量化)
+    import pandas as pd
+    _start = pd.Timestamp(cfg.simulation.start_date)
+    _end = pd.Timestamp(cfg.simulation.end_date)
+    span = (_end - _start).days
+    partial = [t for t, df in price_data.items()
+               if (df.index.min() - _start).days > 30 or (_end - df.index.max()).days > 30]
+    print("      --- データ品質 ---")
+    print(f"      期間全体をカバーしない銘柄: {len(partial)} / {len(price_data)}")
+    print("      ⚠ 生存者バイアス: 銘柄リストは現存銘柄のみで構成されており、")
+    print("        期間中に上場廃止・破綻した銘柄(敗者)が含まれていません。")
+    print("        実際の成績はこのバックテストより悪くなる可能性が高いです。")
+
     print(f"[3/4] 戦略: {cfg.strategy_name}")
     strategy = build_strategy(cfg.strategy_name, cfg.strategy_params)
 
@@ -81,6 +94,11 @@ def main():
             "strategy": cfg.strategy_name,
             "metrics": asdict(m),
             "benchmark": {"total_return_pct": bench["total_return_pct"], "alpha_pct": alpha},
+            "data_quality": {
+                "n_tickers": len(price_data),
+                "n_partial_coverage": len(partial),
+                "survivorship_bias": "銘柄リストは現存銘柄のみ。上場廃止銘柄が除外されており成績は過大評価の可能性",
+            },
             "success": {k: {"pass": v[0], "detail": v[1]} for k, v in success.items()},
             "equity_curve": [(str(d), v) for d, v in pf.equity_curve],
             "trades": [
