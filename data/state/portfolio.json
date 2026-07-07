@@ -9,14 +9,14 @@
       "shares": 100,
       "entry_price": 2719.7169999999996,
       "entry_date": "2026-06-08 00:00:00",
-      "peak_price": 2912.0
+      "peak_price": 2951.0
     },
     "9989.T": {
       "ticker": "9989.T",
       "shares": 100,
       "entry_price": 3878.8749999999995,
       "entry_date": "2026-06-08 00:00:00",
-      "peak_price": 3878.8749999999995
+      "peak_price": 3903.0
     },
     "8704.T": {
       "ticker": "8704.T",
@@ -30,35 +30,35 @@
       "shares": 300,
       "entry_price": 1665.6639999999998,
       "entry_date": "2026-06-26 00:00:00",
-      "peak_price": 1720.5
+      "peak_price": 1739.5
     },
     "9022.T": {
       "ticker": "9022.T",
       "shares": 100,
       "entry_price": 3488.4849999999997,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 3559.0
+      "peak_price": 3700.0
     },
     "9007.T": {
       "ticker": "9007.T",
       "shares": 300,
       "entry_price": 1695.1934999999999,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 1697.0
+      "peak_price": 1715.5
     },
     "3391.T": {
       "ticker": "3391.T",
       "shares": 200,
       "entry_price": 2095.093,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 2255.5
+      "peak_price": 2308.0
     },
     "4901.T": {
       "ticker": "4901.T",
       "shares": 100,
       "entry_price": 3516.5129999999995,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 3622.0
+      "peak_price": 3646.0
     },
     "2181.T": {
       "ticker": "2181.T",
@@ -86,35 +86,35 @@
       "shares": 100,
       "entry_price": 734.5337877807616,
       "entry_date": "2026-07-01 00:00:00",
-      "peak_price": 755.2999877929688
+      "peak_price": 762.0999755859375
     },
     "9433.T": {
       "ticker": "9433.T",
       "shares": 100,
       "entry_price": 2726.2234999999996,
       "entry_date": "2026-07-02 00:00:00",
-      "peak_price": 2737.5
+      "peak_price": 2779.0
     },
     "9006.T": {
       "ticker": "9006.T",
       "shares": 100,
       "entry_price": 1493.4919999999997,
       "entry_date": "2026-07-02 00:00:00",
-      "peak_price": 1564.5
+      "peak_price": 1569.0
     },
     "3289.T": {
       "ticker": "3289.T",
       "shares": 200,
       "entry_price": 1334.8335,
       "entry_date": "2026-07-03 00:00:00",
-      "peak_price": 1338.0
+      "peak_price": 1338.5
     },
     "8600.T": {
       "ticker": "8600.T",
       "shares": 100,
       "entry_price": 895.8949999999999,
       "entry_date": "2026-07-03 00:00:00",
-      "peak_price": 902.0
+      "peak_price": 907.0
     }
   },
   "trades": [
@@ -793,6 +793,10 @@
     [
       "2026-07-06 00:00:00",
       5285486.526337022
+    ],
+    [
+      "2026-07-07 00:00:00",
+      5320396.523895616
     ]
   ]
 }
