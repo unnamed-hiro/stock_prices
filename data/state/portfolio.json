@@ -30,14 +30,14 @@
       "shares": 300,
       "entry_price": 1665.6639999999998,
       "entry_date": "2026-06-26 00:00:00",
-      "peak_price": 1767.5
+      "peak_price": 1781.5
     },
     "9022.T": {
       "ticker": "9022.T",
       "shares": 100,
       "entry_price": 3488.4849999999997,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 3766.0
+      "peak_price": 3838.0
     },
     "9007.T": {
       "ticker": "9007.T",
@@ -58,14 +58,14 @@
       "shares": 100,
       "entry_price": 3516.5129999999995,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 3648.0
+      "peak_price": 3671.0
     },
     "2181.T": {
       "ticker": "2181.T",
       "shares": 200,
       "entry_price": 247.94769694519042,
       "entry_date": "2026-06-29 00:00:00",
-      "peak_price": 266.1000061035156
+      "peak_price": 267.20001220703125
     },
     "8016.T": {
       "ticker": "8016.T",
@@ -86,35 +86,35 @@
       "shares": 100,
       "entry_price": 734.5337877807616,
       "entry_date": "2026-07-01 00:00:00",
-      "peak_price": 790.4000244140625
+      "peak_price": 799.0
     },
     "9433.T": {
       "ticker": "9433.T",
       "shares": 100,
       "entry_price": 2726.2234999999996,
       "entry_date": "2026-07-02 00:00:00",
-      "peak_price": 2868.0
+      "peak_price": 2881.5
     },
     "9006.T": {
       "ticker": "9006.T",
       "shares": 100,
       "entry_price": 1493.4919999999997,
       "entry_date": "2026-07-02 00:00:00",
-      "peak_price": 1589.0
+      "peak_price": 1592.5
     },
     "3289.T": {
       "ticker": "3289.T",
       "shares": 200,
       "entry_price": 1334.8335,
       "entry_date": "2026-07-03 00:00:00",
-      "peak_price": 1338.5
+      "peak_price": 1346.5
     },
     "8600.T": {
       "ticker": "8600.T",
       "shares": 100,
       "entry_price": 895.8949999999999,
       "entry_date": "2026-07-03 00:00:00",
-      "peak_price": 954.0
+      "peak_price": 961.0
     }
   },
   "trades": [
@@ -829,6 +829,10 @@
     [
       "2026-07-17 00:00:00",
       5340286.532440538
+    ],
+    [
+      "2026-07-21 00:00:00",
+      5368766.531219834
     ]
   ]
 }
