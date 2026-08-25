@@ -1,83 +1,71 @@
 {
-  "decided_on": "2026-08-24",
+  "decided_on": "2026-08-25",
   "orders": [
     {
       "side": "buy",
-      "ticker": "4507.T",
-      "confidence": 0.4446295794139785,
-      "reason": "合議buy 2/3 [technical:buy(0.80), fundamental:buy(0.76)]"
+      "ticker": "6753.T",
+      "confidence": 0.4138600575892752,
+      "reason": "合議buy 2/3 [technical:buy(0.82), fundamental:buy(0.60)]"
     },
     {
       "side": "buy",
-      "ticker": "8725.T",
-      "confidence": 0.36313690372249896,
-      "reason": "合議buy 2/3 [technical:buy(0.52), fundamental:buy(0.82)]"
-    },
-    {
-      "side": "buy",
-      "ticker": "9201.T",
-      "confidence": 0.3594741447045185,
-      "reason": "合議buy 2/3 [technical:buy(0.57), fundamental:buy(0.72)]"
-    },
-    {
-      "side": "buy",
-      "ticker": "1925.T",
-      "confidence": 0.3793937646559684,
-      "reason": "合議buy 2/3 [technical:buy(0.59), fundamental:buy(0.78)]"
+      "ticker": "7751.T",
+      "confidence": 0.35686861181860036,
+      "reason": "合議buy 2/3 [technical:buy(0.58), fundamental:buy(0.70)]"
     },
     {
       "side": "buy",
       "ticker": "2432.T",
-      "confidence": 0.390010377123663,
-      "reason": "合議buy 2/3 [technical:buy(0.64), fundamental:buy(0.76)]"
+      "confidence": 0.360212563152341,
+      "reason": "合議buy 2/3 [technical:buy(0.55), fundamental:buy(0.76)]"
     },
     {
       "side": "buy",
-      "ticker": "6395.T",
-      "confidence": 0.3482396216415502,
-      "reason": "合議buy 2/3 [technical:buy(0.48), fundamental:buy(0.80)]"
+      "ticker": "4578.T",
+      "confidence": 0.35815468132879147,
+      "reason": "合議buy 2/3 [technical:buy(0.63), fundamental:buy(0.64)]"
+    },
+    {
+      "side": "buy",
+      "ticker": "6135.T",
+      "confidence": 0.33570127250931914,
+      "reason": "合議buy 2/3 [technical:buy(0.57), fundamental:buy(0.63)]"
     },
     {
       "side": "buy",
       "ticker": "6727.T",
-      "confidence": 0.3404638346078431,
-      "reason": "合議buy 2/3 [technical:buy(0.57), fundamental:buy(0.65)]"
+      "confidence": 0.35825477502428466,
+      "reason": "合議buy 2/3 [technical:buy(0.62), fundamental:buy(0.65)]"
+    },
+    {
+      "side": "buy",
+      "ticker": "7860.T",
+      "confidence": 0.38656542324044635,
+      "reason": "合議buy 2/3 [technical:buy(0.73), fundamental:buy(0.62)]"
     },
     {
       "side": "buy",
       "ticker": "8154.T",
-      "confidence": 0.35011768785440606,
-      "reason": "合議buy 2/3 [technical:buy(0.48), fundamental:buy(0.82)]"
-    },
-    {
-      "side": "buy",
-      "ticker": "9010.T",
-      "confidence": 0.333585430452535,
-      "reason": "合議buy 2/3 [technical:buy(0.52), fundamental:buy(0.69)]"
+      "confidence": 0.37868801397867174,
+      "reason": "合議buy 2/3 [technical:buy(0.56), fundamental:buy(0.82)]"
     },
     {
       "side": "buy",
       "ticker": "9616.T",
-      "confidence": 0.38948750483067734,
-      "reason": "合議buy 2/3 [technical:buy(0.72), fundamental:buy(0.64)]"
+      "confidence": 0.35494551851137884,
+      "reason": "合議buy 2/3 [technical:buy(0.62), fundamental:buy(0.63)]"
     },
     {
       "side": "buy",
       "ticker": "9706.T",
-      "confidence": 0.3674992395555556,
-      "reason": "合議buy 2/3 [technical:buy(0.68), fundamental:buy(0.61)]"
+      "confidence": 0.3582940643135095,
+      "reason": "合議buy 2/3 [technical:buy(0.65), fundamental:buy(0.60)]"
     },
     {
       "side": "buy",
-      "ticker": "2784.T",
-      "confidence": 0.339124073597419,
-      "reason": "合議buy 2/3 [technical:buy(0.52), fundamental:buy(0.71)]"
-    },
-    {
-      "side": "buy",
-      "ticker": "3349.T",
-      "confidence": 0.39940588185056297,
-      "reason": "合議buy 2/3 [technical:buy(0.76), fundamental:buy(0.62)]"
+      "ticker": "9790.T",
+      "confidence": 0.3664416676405508,
+      "reason": "合議buy 2/3 [technical:buy(0.64), fundamental:buy(0.66)]"
     }
   ]
 }
