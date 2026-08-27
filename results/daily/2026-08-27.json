@@ -1,0 +1,67 @@
+{
+  "date": "2026-08-27",
+  "strategy": "ensemble",
+  "starting_equity": NaN,
+  "ending_equity": NaN,
+  "cash": 506422.84689213696,
+  "n_positions": 17,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "8154.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8354.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "6326.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9201.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "2502.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9616.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "6963.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "6135.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8031.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9790.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8804.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "1928.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "2432.T",
+      "reason": "買い注文: 当日始値なし"
+    }
+  ],
+  "planned_orders": []
+}
