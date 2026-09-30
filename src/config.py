@@ -37,6 +37,16 @@ class RiskConfig:
     # False: 上昇トレンド継続中は戦略の売りシグナルを無視し、リスク決済(トレーリング等)に委ねる。
     #        過剰売買(churn)を抑え、トレンドに乗り続ける。
     honor_strategy_sell: bool = True
+    # 市場レジームフィルター: ユニバース等ウェイト合成指数が regime_ma_days 移動平均を
+    # 下回っている間は新規買いを停止 (下落相場での連れ安を回避)。保有の決済は通常通り。
+    regime_filter: bool = False
+    regime_ma_days: int = 200
+    # サイジング: "fixed"=資産の position_size_pct を一律投入 (旧来)
+    #             "volatility"=ATRベースで「1ポジションの想定損失=資産のrisk_per_trade_pct」に統一
+    sizing_mode: str = "fixed"
+    risk_per_trade_pct: float = 0.01
+    atr_period: int = 14
+    atr_stop_multiple: float = 2.0
 
 
 @dataclass

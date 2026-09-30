@@ -94,16 +94,6 @@ def reset_state():
     clear_pending()
 
 
-def _size_position(pf: Portfolio, price: float, pct: float, reserve_pct: float,
-                   base_equity: float | None = None) -> int:
-    # base_equity を渡せば「現在の総資産」基準 (複利)、無ければ初期資金基準
-    base = base_equity if base_equity is not None else pf.initial_capital
-    target = base * pct
-    available = pf.cash - pf.initial_capital * reserve_pct
-    budget = min(target, available)
-    if budget <= 0 or price * 100 > budget:
-        return 0
-    return int(budget // (price * 100)) * 100
 
 
 def _close_on(df: pd.DataFrame, date: pd.Timestamp) -> float | None:
@@ -164,6 +154,8 @@ class DailyReport:
     skipped: list[dict] = field(default_factory=list)
     # next_open方式: 当日の判断で発行し翌営業日の始値で約定する予定の注文
     planned_orders: list[dict] = field(default_factory=list)
+    # 市場レジーム: "risk_on"=通常 / "risk_off"=市場が長期MA割れ→新規買い停止中
+    regime: str = "risk_on"
 
     def to_dict(self) -> dict:
         return {
@@ -179,6 +171,7 @@ class DailyReport:
             "executed_sells": self.executed_sells,
             "skipped": self.skipped,
             "planned_orders": self.planned_orders,
+            "regime": self.regime,
         }
 
 
@@ -222,6 +215,7 @@ def _fill_pending_orders(
     buys = sorted([x for x in orders if x["side"] == "buy"],
                   key=lambda x: -x.get("confidence", 0))
     base_equity = pf.total_equity(opens) if getattr(risk, "size_on_equity", True) else None
+    from .risk_engine import size_position
     for o in buys:
         if o["ticker"] in pf.positions:
             continue
@@ -232,8 +226,8 @@ def _fill_pending_orders(
         if px is None:
             report.skipped.append({"ticker": o["ticker"], "reason": "買い注文: 当日始値なし"})
             continue
-        shares = _size_position(pf, px, risk.position_size_pct,
-                                risk.min_cash_reserve_pct, base_equity)
+        shares = size_position(px, pf.cash, pf.initial_capital, risk,
+                               base_equity=base_equity, atr_value=o.get("atr"))
         if shares <= 0:
             report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
             continue
@@ -293,6 +287,16 @@ def _decide_orders(
         for s in signals
     ]
 
+    # 市場レジームフィルター (バックテスターと同一ロジック)
+    from .risk_engine import build_regime_series, regime_on, compute_atr
+    buy_allowed = True
+    if getattr(risk, "regime_filter", False):
+        regime = build_regime_series(price_data, getattr(risk, "regime_ma_days", 200))
+        buy_allowed = regime_on(regime, date)
+    report.regime = "risk_on" if buy_allowed else "risk_off"
+    vol_sizing = getattr(risk, "sizing_mode", "fixed") == "volatility"
+    atr_period = getattr(risk, "atr_period", 14)
+
     # honor_strategy_sell=False の場合、戦略の売りは無視しリスク決済(トレーリング等)に委ねる
     honor_sell = getattr(risk, "honor_strategy_sell", True)
     for s in signals:
@@ -301,8 +305,16 @@ def _decide_orders(
                 orders.append({"side": "sell", "ticker": s.ticker,
                                "kind": "ai", "reason": s.reason})
         elif s.action == "buy" and s.ticker not in held:
-            orders.append({"side": "buy", "ticker": s.ticker,
-                           "confidence": s.confidence, "reason": s.reason})
+            if not buy_allowed:
+                report.skipped.append({"ticker": s.ticker,
+                                       "reason": "レジームオフ(市場が長期MA割れ)のため新規買い停止"})
+                continue
+            order = {"side": "buy", "ticker": s.ticker,
+                     "confidence": s.confidence, "reason": s.reason}
+            if vol_sizing and s.ticker in price_data:
+                # ATRは判断時点までのデータで算出し注文に添付 (先読みなし)
+                order["atr"] = compute_atr(price_data[s.ticker], date, atr_period)
+            orders.append(order)
     return orders
 
 
@@ -400,6 +412,7 @@ def _fill_orders_at_close(
     buys = sorted([x for x in orders if x["side"] == "buy"],
                   key=lambda x: -x.get("confidence", 0))
     base_equity = pf.total_equity(closes) if getattr(risk, "size_on_equity", True) else None
+    from .risk_engine import size_position
     for o in buys:
         if o["ticker"] in pf.positions:
             continue
@@ -410,8 +423,8 @@ def _fill_orders_at_close(
         if px is None:
             report.skipped.append({"ticker": o["ticker"], "reason": "価格データなし"})
             continue
-        shares = _size_position(pf, px, risk.position_size_pct,
-                                risk.min_cash_reserve_pct, base_equity)
+        shares = size_position(px, pf.cash, pf.initial_capital, risk,
+                               base_equity=base_equity, atr_value=o.get("atr"))
         if shares <= 0:
             report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
             continue
@@ -443,6 +456,8 @@ def format_report(report: DailyReport) -> str:
         f"  現金残       : {report.cash:>15,.0f} 円",
         f"  保有銘柄数   : {report.n_positions}",
     ]
+    if report.regime == "risk_off":
+        lines.append("  ⚠ 市場レジーム: リスクオフ (合成指数が長期MA割れ) — 新規買い停止中")
     if report.exits:
         lines.append("-" * 66)
         lines.append(f"  リスク管理による決済 ({len(report.exits)}件)")

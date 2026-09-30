@@ -59,21 +59,6 @@ def _plan_exits(
     return orders
 
 
-def _size_position(
-    portfolio: Portfolio,
-    price: float,
-    pct_per_position: float,
-    min_cash_reserve_pct: float,
-    base_equity: float | None = None,
-) -> int:
-    # base_equity を渡せば「現在の総資産」基準 (複利)、無ければ初期資金基準
-    base = base_equity if base_equity is not None else portfolio.initial_capital
-    target_yen = base * pct_per_position
-    available = portfolio.cash - portfolio.initial_capital * min_cash_reserve_pct
-    budget = min(target_yen, available)
-    if budget <= 0 or price <= 0:
-        return 0
-    return int(budget // (price * 100)) * 100 if price * 100 <= budget else 0
 
 
 def _execute_orders(
@@ -95,6 +80,7 @@ def _execute_orders(
     # 買いは信頼度順
     buys = sorted([x for x in orders if x["side"] == "buy"], key=lambda x: -x.get("confidence", 0))
     base_equity = pf.total_equity(fill_prices) if getattr(risk, "size_on_equity", True) else None
+    from .risk_engine import size_position
     for o in buys:
         if o["ticker"] in pf.positions:
             continue
@@ -103,8 +89,8 @@ def _execute_orders(
         px = fill_prices.get(o["ticker"])
         if px is None:
             continue
-        shares = _size_position(pf, px, risk.position_size_pct,
-                                risk.min_cash_reserve_pct, base_equity)
+        shares = size_position(px, pf.cash, pf.initial_capital, risk,
+                               base_equity=base_equity, atr_value=o.get("atr"))
         if shares > 0:
             pf.buy(o["ticker"], px, shares, date)
 
@@ -160,6 +146,14 @@ def run_backtest(
     execution = getattr(config.simulation, "execution", "next_open")
     pending: list[dict] = []
 
+    # 市場レジームフィルター: ユニバース合成指数の長期MA判定を事前計算
+    from .risk_engine import build_regime_series, regime_on, compute_atr
+    regime = None
+    if getattr(risk, "regime_filter", False):
+        regime = build_regime_series(price_data, getattr(risk, "regime_ma_days", 200))
+    vol_sizing = getattr(risk, "sizing_mode", "fixed") == "volatility"
+    atr_period = getattr(risk, "atr_period", 14)
+
     for i, date in enumerate(all_dates):
         closes = {t: _close_on(df, date) for t, df in price_data.items()}
         closes = {t: p for t, p in closes.items() if p is not None}
@@ -182,6 +176,8 @@ def run_backtest(
         held = set(pf.positions.keys())
         signals = strategy.generate_signals(date, price_data, held)
         honor_sell = getattr(risk, "honor_strategy_sell", True)
+        # レジームオフ(市場が長期MA割れ)の間は新規買いを見送る。決済は通常通り。
+        buy_allowed = regime_on(regime, date) if regime is not None else True
         sig_orders = []
         for s in signals:
             if s.action == "sell" and s.ticker in held and s.ticker not in exited:
@@ -190,8 +186,14 @@ def run_backtest(
                 if honor_sell:
                     sig_orders.append({"side": "sell", "ticker": s.ticker, "reason": s.reason})
             elif s.action == "buy" and s.ticker not in held:
-                sig_orders.append({"side": "buy", "ticker": s.ticker,
-                                   "confidence": s.confidence, "reason": s.reason})
+                if not buy_allowed:
+                    continue
+                order = {"side": "buy", "ticker": s.ticker,
+                         "confidence": s.confidence, "reason": s.reason}
+                if vol_sizing and s.ticker in price_data:
+                    # ATRは判断時点までのデータで算出し注文に添付 (先読みなし)
+                    order["atr"] = compute_atr(price_data[s.ticker], date, atr_period)
+                sig_orders.append(order)
 
         orders = exit_orders + sig_orders
         if execution == "close":
