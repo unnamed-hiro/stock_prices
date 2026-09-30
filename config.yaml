@@ -24,6 +24,14 @@ risk:
   min_cash_reserve_pct: 0.10    # 最低現金残高 (10%)
   size_on_equity: true          # true=投資額を現在資産基準で算出(複利) / false=初期資金固定
   honor_strategy_sell: false    # false=上昇継続中は戦略売りを無視しトレーリングに委ねる(過剰売買抑制)
+  # --- 市場レジームフィルター (大負け回避・優先度1の改善) ---
+  regime_filter: true           # ユニバース合成指数が長期MAを下回る間は新規買い停止
+  regime_ma_days: 200           # 長期移動平均の日数 (200日線が標準)
+  # --- ボラティリティ・サイジング (賭け金の科学・優先度2の改善) ---
+  sizing_mode: "volatility"     # "volatility"=ATRベース(推奨) / "fixed"=一律10%(旧来)
+  risk_per_trade_pct: 0.01      # 1ポジションの想定損失を資産の1%に統一
+  atr_period: 14                # ATR算出期間
+  atr_stop_multiple: 2.0        # 想定損切り幅 = ATR × この倍率
 
 # AIモデル選択: technical / ml / fundamental / llm / ensemble
 strategy:

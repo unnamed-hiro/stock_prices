@@ -4,8 +4,14 @@ import pandas as pd
 import pytest
 
 from src.strategies.technical import TechnicalStrategy
-from src.backtester import _size_position
-from src.live_paper import _size_position as live_size
+from src.risk_engine import size_position
+from src.config import load_config
+
+def _risk(**over):
+    r = load_config().risk
+    r.sizing_mode = "fixed"
+    for k, v in over.items(): setattr(r, k, v)
+    return r
 from src.portfolio import Portfolio
 
 
@@ -62,25 +68,19 @@ def test_size_on_equity_compounds():
     pf = Portfolio(initial_capital=5_000_000)
     pf.cash = 10_000_000  # 利益が乗って資産倍増した想定
 
+    r = _risk(position_size_pct=0.10, min_cash_reserve_pct=0.10)
     # 初期資金基準 (base_equity=None)
-    shares_fixed = _size_position(pf, 1000.0, 0.10, 0.10, base_equity=None)
+    shares_fixed = size_position(1000.0, pf.cash, pf.initial_capital, r, base_equity=None)
     # 現在資産基準 (複利)
-    shares_compound = _size_position(pf, 1000.0, 0.10, 0.10, base_equity=10_000_000)
+    shares_compound = size_position(1000.0, pf.cash, pf.initial_capital, r, base_equity=10_000_000)
 
     assert shares_compound > shares_fixed
-
-
-def test_live_size_on_equity_compounds():
-    pf = Portfolio(initial_capital=5_000_000)
-    pf.cash = 10_000_000
-    fixed = live_size(pf, 1000.0, 0.10, 0.10, base_equity=None)
-    compound = live_size(pf, 1000.0, 0.10, 0.10, base_equity=10_000_000)
-    assert compound > fixed
 
 
 def test_size_respects_cash_reserve():
     """現金が乏しいときは複利基準でも現金準備率を割らない"""
     pf = Portfolio(initial_capital=5_000_000)
     pf.cash = 400_000  # ほぼ現金なし (準備率10%=50万を下回る)
-    shares = _size_position(pf, 1000.0, 0.10, 0.10, base_equity=20_000_000)
+    r = _risk(position_size_pct=0.10, min_cash_reserve_pct=0.10)
+    shares = size_position(1000.0, pf.cash, pf.initial_capital, r, base_equity=20_000_000)
     assert shares == 0
