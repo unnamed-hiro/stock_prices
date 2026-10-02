@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-02",
+  "strategy": "ensemble",
+  "starting_equity": 5274472.359411082,
+  "ending_equity": 5274472.359411082,
+  "cash": 516702.3612421368,
+  "n_positions": 18,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "9432.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    },
+    {
+      "ticker": "5020.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    },
+    {
+      "ticker": "8600.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    },
+    {
+      "ticker": "9990.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    }
+  ],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [],
+  "planned_orders": [],
+  "regime": "risk_on"
+}
