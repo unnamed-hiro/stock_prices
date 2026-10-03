@@ -309,6 +309,18 @@ def _decide_orders(
                 report.skipped.append({"ticker": s.ticker,
                                        "reason": "レジームオフ(市場が長期MA割れ)のため新規買い停止"})
                 continue
+            # 決算またぎ回避: 発表直前の銘柄は見送り (決算日不明なら制限なし)
+            blackout = getattr(risk, "earnings_blackout_days", 0)
+            if blackout > 0:
+                from .earnings import in_earnings_blackout
+                try:
+                    skip = in_earnings_blackout(s.ticker, date, blackout)
+                except Exception:
+                    skip = False  # データ障害で取引を止めない
+                if skip:
+                    report.skipped.append({"ticker": s.ticker,
+                                           "reason": f"決算発表が{blackout}日以内のため見送り"})
+                    continue
             order = {"side": "buy", "ticker": s.ticker,
                      "confidence": s.confidence, "reason": s.reason}
             if vol_sizing and s.ticker in price_data:
