@@ -33,6 +33,15 @@ class EnsembleStrategy(Strategy):
         for m in self.member_names:
             if m == "ensemble":
                 continue  # 自己参照は無視
+            if m == "llm":
+                # LLM戦略はAPIキーが無ければ自動スキップ (劣化運転)。
+                # キーを設定するだけで次回実行から合議に参加する。
+                import os
+                key_env = (all_params.get("llm") or {}).get(
+                    "api_key_env", "ANTHROPIC_API_KEY")
+                if not os.environ.get(key_env):
+                    print(f"[ensemble] {key_env} 未設定のため llm メンバーをスキップ")
+                    continue
             self.members[m] = build_strategy(m, all_params)
 
     def warmup_days(self) -> int:

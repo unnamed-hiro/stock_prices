@@ -32,6 +32,8 @@ risk:
   risk_per_trade_pct: 0.01      # 1ポジションの想定損失を資産の1%に統一
   atr_period: 14                # ATR算出期間
   atr_stop_multiple: 2.0        # 想定損切り幅 = ATR × この倍率
+  # --- 決算またぎ回避 (エッジの源泉・優先度3の改善) ---
+  earnings_blackout_days: 3     # 決算発表N日前〜翌日は新規買い見送り (0=無効, ライブのみ)
 
 # AIモデル選択: technical / ml / fundamental / llm / ensemble
 strategy:
@@ -55,9 +57,11 @@ strategy:
     sell_threshold: 0.45        # この確率未満で売り
 
   llm:
-    model: "claude-opus-4-7"
+    model: "claude-sonnet-5-5"  # 日次バッチ向けにコスト効率の良い最新モデル
     api_key_env: "ANTHROPIC_API_KEY"
     max_tickers_per_call: 10    # API節約のため
+    use_news: true              # ライブ運用時のみ直近ニュース見出しをプロンプトに注入
+    news_max_items: 3           # 1銘柄あたりの見出し数
 
   fundamental:
     max_per: 25.0               # この値以下を割安と評価 (PER)
@@ -68,11 +72,13 @@ strategy:
 
   # マルチAI合議制: 複数戦略の判断を重み付き集約 (API課金なし構成)
   ensemble:
-    members: ["technical", "ml", "fundamental"]
+    # llm は ANTHROPIC_API_KEY が設定されている時だけ自動参加 (未設定ならスキップ)
+    members: ["technical", "ml", "fundamental", "llm"]
     weights:                    # 各専門家の発言力
       technical: 1.0
       ml: 1.0
       fundamental: 0.7
+      llm: 0.8
     buy_threshold: 1.0          # 加重buyスコアがこれ以上で買い (2戦略が中信頼度で一致する水準)
     sell_threshold: 0.7         # 加重sellスコアがこれ以上で売り
     min_agreement: 2            # 最低何戦略が一致すれば動くか

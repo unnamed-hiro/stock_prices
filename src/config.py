@@ -47,6 +47,9 @@ class RiskConfig:
     risk_per_trade_pct: float = 0.01
     atr_period: int = 14
     atr_stop_multiple: float = 2.0
+    # 決算またぎ回避: 次回決算発表のこの日数前〜翌日は新規買いを見送る (0=無効)。
+    # 決算日が取得できない銘柄は制限なし (fail-open)。ライブ運用のみ適用。
+    earnings_blackout_days: int = 3
 
 
 @dataclass
