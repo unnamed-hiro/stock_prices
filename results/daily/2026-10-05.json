@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-05",
+  "strategy": "ensemble",
+  "starting_equity": NaN,
+  "ending_equity": NaN,
+  "cash": 516702.3612421368,
+  "n_positions": 18,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [],
+  "planned_orders": [],
+  "regime": "risk_on"
+}
