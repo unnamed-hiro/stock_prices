@@ -1,4 +1,53 @@
 {
-  "decided_on": "2026-10-05",
-  "orders": []
+  "decided_on": "2026-10-06",
+  "orders": [
+    {
+      "side": "sell",
+      "ticker": "9022.T",
+      "kind": "risk",
+      "reason": "trailing_stop (peak比-15.5%)"
+    },
+    {
+      "side": "buy",
+      "ticker": "9984.T",
+      "confidence": 0.41870041205265335,
+      "reason": "合議buy 2/3 [technical:buy(0.72), fundamental:buy(0.76)]",
+      "atr": 399.8548122439697
+    },
+    {
+      "side": "buy",
+      "ticker": "8316.T",
+      "confidence": 0.34637419082189136,
+      "reason": "合議buy 2/3 [technical:buy(0.58), fundamental:buy(0.66)]",
+      "atr": 86.8186497399488
+    },
+    {
+      "side": "buy",
+      "ticker": "9104.T",
+      "confidence": 0.33369861485250135,
+      "reason": "合議buy 2/3 [technical:buy(0.52), fundamental:buy(0.69)]",
+      "atr": 184.09532790262998
+    },
+    {
+      "side": "buy",
+      "ticker": "5901.T",
+      "confidence": 0.4235917688074135,
+      "reason": "合議buy 2/3 [technical:buy(0.80), fundamental:buy(0.67)]",
+      "atr": 84.46297194768911
+    },
+    {
+      "side": "buy",
+      "ticker": "9616.T",
+      "confidence": 0.36548214326702055,
+      "reason": "合議buy 2/3 [technical:buy(0.63), fundamental:buy(0.66)]",
+      "atr": 70.23300438153358
+    },
+    {
+      "side": "buy",
+      "ticker": "2533.T",
+      "confidence": 0.34569250421794867,
+      "reason": "合議buy 2/3 [technical:buy(0.50), fundamental:buy(0.77)]",
+      "atr": 8.928571428571429
+    }
+  ]
 }
