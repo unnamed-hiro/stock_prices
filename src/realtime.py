@@ -235,7 +235,8 @@ def execute_tick(
 ) -> Tick:
     """1ティック分の AI 判断と仮想売買を実行"""
     params = params or {}
-    prices = {t: float(df["Close"].iloc[-1]) for t, df in bars.items() if len(df)}
+    prices = {t: float(df["Close"].dropna().iloc[-1])
+              for t, df in bars.items() if len(df["Close"].dropna())}
     # tz-naive に統一 (Portfolio は tz-naive Timestamp 前提)
     ts = pd.Timestamp(now).tz_localize(None) if pd.Timestamp(now).tz else pd.Timestamp(now)
 

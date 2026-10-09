@@ -101,8 +101,10 @@ def reset_state():
 
 
 def _close_on(df: pd.DataFrame, date: pd.Timestamp) -> float | None:
-    sub = df.loc[:date]
-    return float(sub["Close"].iloc[-1]) if len(sub) else None
+    """date までの直近の有効な終値。NaN (データ欠損) は除外する。
+    NaN を通すと評価額が NaN に汚染され、状態ファイルが不正JSONになる。"""
+    sub = df.loc[:date, "Close"].dropna()
+    return float(sub.iloc[-1]) if len(sub) else None
 
 
 def _open_on(df: pd.DataFrame, date: pd.Timestamp) -> float | None:
