@@ -76,6 +76,8 @@ class AppConfig:
     strategy_params: dict
     success_criteria: SuccessCriteria
     raw: dict = field(default_factory=dict)
+    # 通知: "daily"=毎営業日 / "events"=売買・レジーム転換・リスクオフ時のみ / "off"=無効
+    notify_mode: str = "daily"
 
 
 def load_config(path: str | Path = "config.yaml") -> AppConfig:
@@ -89,4 +91,5 @@ def load_config(path: str | Path = "config.yaml") -> AppConfig:
         strategy_params={k: v for k, v in data["strategy"].items() if k != "name"},
         success_criteria=SuccessCriteria(**data["success_criteria"]),
         raw=data,
+        notify_mode=(data.get("notify") or {}).get("mode", "daily"),
     )

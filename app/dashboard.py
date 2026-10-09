@@ -48,10 +48,15 @@ def bootstrap_demo_data() -> list[str]:
 
 
 def list_runs() -> list[Path]:
+    """バックテスト結果のみを列挙する。
+    readiness.json (移行判定) や walkforward_*.json はスキーマが異なるため除外。"""
     if not RESULTS_DIR.exists():
         return []
+    skip = {"readiness.json"}
     return sorted(
-        [p for p in RESULTS_DIR.glob("*.json") if p.parent == RESULTS_DIR],
+        [p for p in RESULTS_DIR.glob("*.json")
+         if p.parent == RESULTS_DIR and p.name not in skip
+         and not p.name.startswith("walkforward_")],
         key=lambda p: p.stat().st_mtime, reverse=True,
     )
 
@@ -231,6 +236,19 @@ def render_all_trades(trades_df: pd.DataFrame):
     st.download_button("CSV をダウンロード", csv, "trades.csv", "text/csv")
 
 
+def _render_readiness():
+    rp = Path("results/readiness.json")
+    if not rp.exists():
+        return
+    r = json.loads(rp.read_text(encoding="utf-8"))
+    icon = "✅" if r.get("ready") else "⏳"
+    with st.expander(f"{icon} 実弾移行判定 — {r.get('verdict','')}", expanded=False):
+        for c in r.get("criteria", []):
+            mark = {"pass": "✅", "pending": "⏳", "fail": "❌"}.get(c["status"], "❓")
+            st.markdown(f"{mark} **{c['name']}** — {c['detail']}")
+        st.caption(r.get("note", ""))
+
+
 def _render_monthly_reports():
     mdir = Path("results/monthly")
     files = sorted(mdir.glob("*.md"), reverse=True) if mdir.exists() else []
@@ -243,6 +261,7 @@ def _render_monthly_reports():
 
 def render_live_state():
     st.subheader("AIライブ・ペーパー口座 (現在の状態)")
+    _render_readiness()
     _render_monthly_reports()
     if not STATE_PATH.exists():
         st.info("`python scripts/run_live.py` をまだ実行していません")

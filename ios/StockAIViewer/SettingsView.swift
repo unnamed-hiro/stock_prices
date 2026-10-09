@@ -60,6 +60,7 @@ struct SettingsView: View {
     }
 
     private func test() async {
+        mirrorToAppGroup()
         do {
             _ = try await GitHubClient().file("data/state/portfolio.json",
                                               as: PortfolioState.self)
@@ -67,5 +68,14 @@ struct SettingsView: View {
         } catch {
             testResult = "❌ \(error.localizedDescription)"
         }
+    }
+
+    /// ウィジェット (別プロセス) と設定を共有する。App Groups 未設定なら何もしない
+    private func mirrorToAppGroup() {
+        guard let g = UserDefaults(suiteName: "group.stockaiviewer") else { return }
+        g.set(owner, forKey: "gh_owner")
+        g.set(repo, forKey: "gh_repo")
+        g.set(branch, forKey: "gh_branch")
+        g.set(token, forKey: "github_token")
     }
 }

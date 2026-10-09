@@ -98,6 +98,34 @@ def main():
         path = save_daily_report(report)
         print(f"\n状態を保存: data/state/portfolio.json")
         print(f"日次ログ : {path}")
+
+        # 実弾移行判定を更新 (results/readiness.json)
+        try:
+            import json as _json
+            from src.readiness import generate_readiness_file, load_monthly_reports
+            from src.monthly_report import load_daily_reports
+            state = _json.loads(Path("data/state/portfolio.json").read_text(encoding="utf-8"))
+            res = generate_readiness_file(state, load_daily_reports(), load_monthly_reports())
+            print(f"移行判定 : {res['verdict']}")
+        except Exception as e:
+            print(f"[warn] 移行判定の生成に失敗 (運用は継続): {e}")
+
+        # プッシュ通知 (NTFY_TOPIC 設定時のみ)
+        try:
+            import json as _json
+            from src.notify import send_ntfy, build_daily_message, should_notify
+            from src.live_paper import DAILY_LOG_DIR
+            rep = report.to_dict()
+            prevs = sorted(DAILY_LOG_DIR.glob("*.json"))
+            prevs = [p for p in prevs if p.stem < rep["date"]]
+            prev = _json.loads(prevs[-1].read_text(encoding="utf-8")) if prevs else None
+            mode = getattr(cfg, "notify_mode", "daily")
+            if should_notify(rep, prev, mode):
+                title, msg, tags = build_daily_message(rep, prev)
+                if send_ntfy(msg, title=title, tags=tags):
+                    print("通知送信 : ntfy ✓")
+        except Exception as e:
+            print(f"[warn] 通知に失敗 (運用は継続): {e}")
     else:
         print("\n[dry-run] 実行はスキップしました (口座変更なし)")
 
