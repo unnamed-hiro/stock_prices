@@ -25,14 +25,34 @@ GitHub Actions (毎営業日16:00 JST)          iPhone アプリ
 
 ## ビルド手順 (Mac + Xcode が必要)
 
+### 方法A: Xcodeから直接クローン (最速・推奨)
+
+Xcodeプロジェクトファイルを同梱しているため、クローンするだけでビルドできます。
+
 1. **Xcode 15 以降**をインストール (Mac App Store)
-2. Xcode → **File → New → Project → iOS → App**
+2. Xcode起動画面の **「Clone Git Repository...」** をクリック
+   (既にXcodeを開いている場合は メニュー Integrate → Clone...)
+3. URL欄に `https://github.com/unnamed-hiro/stock_prices.git` を入力 → **Clone**
+   - プライベートリポジトリの場合、先に Xcode → Settings → **Accounts** →
+     「+」→ GitHub でサインインしておく (パスワード欄には Personal Access Token)
+4. クローン後、Finderで保存先の `ios/StockAIViewer.xcodeproj` を**ダブルクリック**
+   (クローン直後にXcodeがリポジトリ全体を開いた場合は一度閉じてよい)
+5. 左上の青いプロジェクトアイコン → **Signing & Capabilities** タブ →
+   **Team** に自分のApple IDを選択
+   - 「Failed to register bundle identifier」エラーが出たら
+     **Bundle Identifier** の `com.example.StockAIViewer` を
+     `com.あなたの名前.StockAIViewer` などに変更
+6. 上部のデバイス選択で **iPhoneシミュレーター** を選び **⌘R**
+
+### 方法B: 手動でプロジェクトを作る (方法Aで問題が出た場合)
+
+1. Xcode → **File → New → Project → iOS → App**
    - Product Name: `StockAIViewer` / Interface: **SwiftUI** / Language: **Swift**
-3. プロジェクト生成後、テンプレートの `ContentView.swift` を**削除**
-4. この `ios/StockAIViewer/` の **6つの .swift ファイル**をプロジェクトに
+2. テンプレートの `ContentView.swift` を**削除** (Move to Trash)
+3. この `ios/StockAIViewer/` の **7つの .swift ファイル**をプロジェクトに
    ドラッグ&ドロップ (Copy items if needed にチェック)
-5. プロジェクト設定 → General → **Minimum Deployments: iOS 17.0**
-6. シミュレーターまたは実機を選んで **⌘R**
+4. General → **Minimum Deployments: iOS 17.0** に設定
+5. シミュレーターまたは実機を選んで **⌘R**
 
 ### 実機で使う場合の注意
 
