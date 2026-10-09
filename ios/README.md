@@ -54,6 +54,19 @@ Xcodeプロジェクトファイルを同梱しているため、クローンす
 4. General → **Minimum Deployments: iOS 17.0** に設定
 5. シミュレーターまたは実機を選んで **⌘R**
 
+### ホーム画面ウィジェット (任意)
+
+アプリを開かずに評価額とリターンをホーム画面で確認できます:
+
+1. Xcode → **File → New → Target... → iOS → Widget Extension**
+   - Product Name: `StockWidget` / 「Include Configuration App Intent」の**チェックを外す**
+2. 生成された `StockWidget.swift` の中身を、リポジトリの
+   `ios/Widget/StockWidget.swift` の内容で**全て置き換える**
+3. プライベートリポジトリの場合のみ: アプリとWidgetの両ターゲットの
+   Signing & Capabilities に **App Groups** (`group.stockaiviewer`) を追加し、
+   アプリの設定タブで「接続テスト」を一度実行 (設定がウィジェットへ共有される)
+4. ⌘R 後、ホーム画面を長押し → 「+」 → StockWidget を追加
+
 ### 実機で使う場合の注意
 
 - **無料の Apple ID**: 実機インストール可能だが**7日ごとに再ビルド**が必要

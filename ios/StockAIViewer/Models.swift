@@ -180,6 +180,29 @@ struct MonthlyReport: Decodable, Identifiable {
     }
 }
 
+// MARK: - 実弾移行判定 (results/readiness.json)
+
+struct Readiness: Decodable {
+    let ready: Bool
+    let criteria: [Criterion]
+    let verdict: String
+    let note: String?
+
+    struct Criterion: Decodable, Identifiable {
+        let name: String
+        let status: String   // "pass" | "pending" | "fail"
+        let detail: String
+        var id: String { name }
+        var icon: String {
+            switch status {
+            case "pass": return "checkmark.circle.fill"
+            case "fail": return "xmark.circle.fill"
+            default: return "hourglass.circle"
+            }
+        }
+    }
+}
+
 // MARK: - 汎用辞書 (exits / skipped などスキーマが緩い配列要素用)
 
 struct JSONDict: Decodable, Identifiable {

@@ -47,10 +47,22 @@ jobs:
           # リポジトリの Settings → Secrets に ANTHROPIC_API_KEY を設定すると
           # LLM戦略 (ニュース解析) が有効化される。未設定なら従来どおり動く。
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Secrets に NTFY_TOPIC を設定するとiPhoneへプッシュ通知 (未設定なら送らない)
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           python scripts/run_live.py \
             --strategy "${{ github.event.inputs.strategy || 'ensemble' }}" \
             --skip-if-done
+
+      - name: 実行失敗を通知
+        if: failure()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ]; then
+            curl -s -X POST https://ntfy.sh -H "Content-Type: application/json" \
+              -d "{\"topic\":\"$NTFY_TOPIC\",\"title\":\"AI運用: 日次実行が失敗\",\"message\":\"GitHub Actions のログを確認してください\",\"priority\":5,\"tags\":[\"x\"]}" || true
+          fi
 
       - name: 結果をコミット&プッシュ
         run: |
@@ -58,7 +70,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # results/ と data/state/ は .gitignore 対象だが、結果蓄積のため強制追加
           # pending_orders.json は「翌営業日の始値で約定する注文」— 次回実行に必須
-          git add -f results/daily data/state 2>/dev/null || true
+          git add -f results/daily data/state results/readiness.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "変更なし (休場日 or 処理済み)。コミットをスキップ。"
           else

@@ -381,6 +381,28 @@ simulation:
 python scripts/run_monthly_report.py --month 2026-10 --force
 ```
 
+### プッシュ通知 (ntfy.sh)
+
+毎営業日の実行結果をiPhoneへプッシュ通知できます (無料・サーバー不要):
+
+1. iPhoneに **ntfy** アプリ (App Store) を入れ、推測されにくいトピック名
+   (例: `kabu-ai-x7k2m9`) を購読する
+2. GitHub → Settings → Secrets and variables → Actions に
+   **`NTFY_TOPIC`** = そのトピック名 を登録
+3. 以上。次の実行から通知が届きます (実行失敗時・月次レポート完成時も通知)
+
+`config.yaml > notify.mode` で頻度を選べます:
+`"daily"`=毎営業日 / `"events"`=売買・レジーム転換・リスクオフ時のみ / `"off"`=無効。
+※トピック名を知っている人は誰でも購読できるため、長いランダムな名前にすること。
+
+### 実弾移行判定 (results/readiness.json)
+
+「いつ実際のお金を入れてよいか」を感情でなく基準で判定します。毎営業日の
+実行後に自動更新され、ダッシュボードとiPhoneアプリに表示されます:
+運用90営業日以上 / 最大DD -15%以内 / 直近3ヶ月中2ヶ月以上α>0 /
+決済20回以上 / 下落局面の通過経験 — **全基準クリアまで実弾は入れない**。
+基準は `src/readiness.py` で調整できます。
+
 ## 成功条件 (採用判定)
 
 `config.yaml > success_criteria` の全項目を満たした戦略だけを「採用候補」とします。

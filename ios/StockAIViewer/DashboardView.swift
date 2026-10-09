@@ -5,6 +5,7 @@ import Charts
 
 struct DashboardView: View {
     @State private var state: PortfolioState?
+    @State private var readiness: Readiness?
     @State private var error: String?
     @State private var loading = false
 
@@ -49,6 +50,25 @@ struct DashboardView: View {
                     }
                 }
                 .padding(.vertical, 4)
+            }
+
+            if let r = readiness {
+                Section("実弾移行判定") {
+                    Text(r.verdict)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(r.ready ? .green : .secondary)
+                    ForEach(r.criteria) { c in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: c.icon)
+                                .foregroundStyle(c.status == "pass" ? .green :
+                                                 c.status == "fail" ? .red : .orange)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(c.name).font(.subheadline)
+                                Text(c.detail).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
             }
 
             Section("資産推移") {
@@ -108,5 +128,8 @@ struct DashboardView: View {
         } catch {
             self.error = error.localizedDescription
         }
+        // 移行判定は任意情報: 無くても画面は成立する
+        readiness = try? await GitHubClient()
+            .file("results/readiness.json", as: Readiness.self)
     }
 }
