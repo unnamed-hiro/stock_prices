@@ -31,9 +31,27 @@ class Portfolio:
     positions: dict[str, Position] = field(default_factory=dict)
     trades: list[Trade] = field(default_factory=list)
     equity_curve: list[tuple[pd.Timestamp, float]] = field(default_factory=list)
+    # 積立入金の累計 (リターン計算で「入金による増加」を利益と混同しないため)
+    total_deposits: float = 0.0
+    # 入金の履歴 [(date, amount)] — 日次リターン計算で入金日のジャンプを除去する
+    deposit_log: list[tuple[pd.Timestamp, float]] = field(default_factory=list)
 
     def __post_init__(self):
         self.cash = self.initial_capital
+
+    def deposit(self, amount: float, date: pd.Timestamp | None = None):
+        """積立入金。現金と入金累計の両方に記録する。"""
+        if amount <= 0:
+            return
+        self.cash += amount
+        self.total_deposits += amount
+        if date is not None:
+            self.deposit_log.append((date, amount))
+
+    @property
+    def invested_capital(self) -> float:
+        """投下資本合計 = 初期資金 + 積立入金累計"""
+        return self.initial_capital + self.total_deposits
 
     def _exec_price(self, price: float, side: str) -> float:
         return price * (1 + self.slippage_rate) if side == "buy" else price * (1 - self.slippage_rate)

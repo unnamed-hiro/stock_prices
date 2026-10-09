@@ -59,6 +59,8 @@ def load_or_init(config: AppConfig) -> Portfolio:
         for t in data["trades"]
     ]
     pf.equity_curve = [(pd.Timestamp(d), v) for d, v in data["equity_curve"]]
+    pf.total_deposits = data.get("total_deposits", 0.0)
+    pf.deposit_log = [(pd.Timestamp(d), a) for d, a in data.get("deposit_log", [])]
     return pf
 
 
@@ -82,6 +84,8 @@ def save_state(pf: Portfolio):
             for t in pf.trades
         ],
         "equity_curve": [(str(d), v) for d, v in pf.equity_curve],
+        "total_deposits": pf.total_deposits,
+        "deposit_log": [(str(d), a) for d, a in pf.deposit_log],
     }
     with open(_state_path(), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -227,7 +231,8 @@ def _fill_pending_orders(
             report.skipped.append({"ticker": o["ticker"], "reason": "買い注文: 当日始値なし"})
             continue
         shares = size_position(px, pf.cash, pf.initial_capital, risk,
-                               base_equity=base_equity, atr_value=o.get("atr"))
+                               base_equity=base_equity, atr_value=o.get("atr"),
+                               lot_size=getattr(config.simulation, "lot_size", 100))
         if shares <= 0:
             report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
             continue
@@ -347,6 +352,15 @@ def run_one_day(
     pf = load_or_init(config)
     execution = getattr(config.simulation, "execution", "next_open")
 
+    # 月次積立: 月が変わって最初の実行日に入金 (運用開始月はスキップ)
+    monthly_deposit = getattr(config.simulation, "monthly_deposit", 0.0)
+    if monthly_deposit > 0 and not dry_run and pf.equity_curve:
+        last_month = max(
+            [d.strftime("%Y-%m") for d, _ in pf.deposit_log] or
+            [pf.equity_curve[0][0].strftime("%Y-%m")])
+        if date.strftime("%Y-%m") > last_month:
+            pf.deposit(monthly_deposit, date)
+
     closes = {t: _close_on(df, date) for t, df in price_data.items()}
     closes = {t: p for t, p in closes.items() if p is not None}
 
@@ -436,7 +450,8 @@ def _fill_orders_at_close(
             report.skipped.append({"ticker": o["ticker"], "reason": "価格データなし"})
             continue
         shares = size_position(px, pf.cash, pf.initial_capital, risk,
-                               base_equity=base_equity, atr_value=o.get("atr"))
+                               base_equity=base_equity, atr_value=o.get("atr"),
+                               lot_size=getattr(config.simulation, "lot_size", 100))
         if shares <= 0:
             report.skipped.append({"ticker": o["ticker"], "reason": "資金不足/最小単元"})
             continue

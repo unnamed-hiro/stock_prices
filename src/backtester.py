@@ -90,7 +90,8 @@ def _execute_orders(
         if px is None:
             continue
         shares = size_position(px, pf.cash, pf.initial_capital, risk,
-                               base_equity=base_equity, atr_value=o.get("atr"))
+                               base_equity=base_equity, atr_value=o.get("atr"),
+                               lot_size=getattr(config.simulation, "lot_size", 100))
         if shares > 0:
             pf.buy(o["ticker"], px, shares, date)
 
@@ -154,7 +155,19 @@ def run_backtest(
     vol_sizing = getattr(risk, "sizing_mode", "fixed") == "volatility"
     atr_period = getattr(risk, "atr_period", 14)
 
+    monthly_deposit = getattr(config.simulation, "monthly_deposit", 0.0)
+    last_deposit_month: str | None = None
+
     for i, date in enumerate(all_dates):
+        # 月次積立: 毎月最初の営業日に入金 (初月はスキップ=初期資金のみでスタート)
+        if monthly_deposit > 0:
+            month = date.strftime("%Y-%m")
+            if last_deposit_month is None:
+                last_deposit_month = month
+            elif month != last_deposit_month:
+                pf.deposit(monthly_deposit, date)
+                last_deposit_month = month
+
         closes = {t: _close_on(df, date) for t, df in price_data.items()}
         closes = {t: p for t, p in closes.items() if p is not None}
         opens = {t: _open_on(df, date) for t, df in price_data.items()}
