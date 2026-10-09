@@ -1,8 +1,8 @@
 {
   "date": "2026-10-05",
   "strategy": "ensemble",
-  "starting_equity": NaN,
-  "ending_equity": NaN,
+  "starting_equity": 5274472.359411082,
+  "ending_equity": 5274472.359411082,
   "cash": 516702.3612421368,
   "n_positions": 18,
   "exits": [],

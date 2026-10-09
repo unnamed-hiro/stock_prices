@@ -33,6 +33,7 @@ struct PortfolioState: Decodable {
             guard pair.count == 2,
                   case .string(let d) = pair[0],
                   case .number(let v) = pair[1],
+                  v.isFinite,
                   let date = Self.parseDate(d) else { return nil }
             return EquityPoint(date: date, value: v)
         }
@@ -47,8 +48,10 @@ struct PortfolioState: Decodable {
     enum RawPoint: Decodable {
         case string(String)
         case number(Double)
+        case null
         init(from decoder: Decoder) throws {
             let c = try decoder.singleValueContainer()
+            if c.decodeNil() { self = .null; return }
             if let s = try? c.decode(String.self) { self = .string(s); return }
             self = .number(try c.decode(Double.self))
         }
@@ -126,8 +129,8 @@ struct DailyReport: Decodable, Identifiable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         date = try c.decode(String.self, forKey: .date)
         strategy = try c.decode(String.self, forKey: .strategy)
-        startingEquity = try c.decode(Double.self, forKey: .startingEquity)
-        endingEquity = try c.decode(Double.self, forKey: .endingEquity)
+        startingEquity = (try? c.decode(Double.self, forKey: .startingEquity)) ?? 0
+        endingEquity = (try? c.decode(Double.self, forKey: .endingEquity)) ?? 0
         cash = try c.decode(Double.self, forKey: .cash)
         nPositions = try c.decode(Int.self, forKey: .nPositions)
         regime = try c.decodeIfPresent(String.self, forKey: .regime)

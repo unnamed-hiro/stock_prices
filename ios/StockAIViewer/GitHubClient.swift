@@ -67,7 +67,15 @@ final class GitHubClient {
 
     /// ファイルの中身を取得してデコード
     func file<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
-        let data = try await fetch(path, raw: true)
+        var data = try await fetch(path, raw: true)
+        // 防御: Python製JSONに稀に混入する NaN/Infinity は JSON 仕様違反で、
+        // 標準デコーダが解釈できない。null に置換してから読む。
+        if let s = String(data: data, encoding: .utf8), s.contains("NaN") || s.contains("Infinity") {
+            let cleaned = s.replacingOccurrences(
+                of: "(?<=[\\s:,\\[])-?(NaN|Infinity)(?=[\\s,\\]}])",
+                with: "null", options: .regularExpression)
+            data = cleaned.data(using: .utf8) ?? data
+        }
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {

@@ -103,4 +103,8 @@ class Portfolio:
         return self.cash + self.market_value(prices)
 
     def record_equity(self, date: pd.Timestamp, prices: dict[str, float]):
-        self.equity_curve.append((date, self.total_equity(prices)))
+        eq = self.total_equity(prices)
+        # NaN/inf は記録しない: 状態JSONが不正になり全ビューア(アプリ等)が読めなくなる
+        import math
+        if math.isfinite(eq):
+            self.equity_curve.append((date, eq))
