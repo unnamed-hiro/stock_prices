@@ -231,8 +231,19 @@ def render_all_trades(trades_df: pd.DataFrame):
     st.download_button("CSV をダウンロード", csv, "trades.csv", "text/csv")
 
 
+def _render_monthly_reports():
+    mdir = Path("results/monthly")
+    files = sorted(mdir.glob("*.md"), reverse=True) if mdir.exists() else []
+    if not files:
+        return
+    with st.expander(f"📅 月次成績レポート ({len(files)}ヶ月分)", expanded=False):
+        sel = st.selectbox("対象月", [f.stem for f in files])
+        st.markdown((mdir / f"{sel}.md").read_text(encoding="utf-8"))
+
+
 def render_live_state():
     st.subheader("AIライブ・ペーパー口座 (現在の状態)")
+    _render_monthly_reports()
     if not STATE_PATH.exists():
         st.info("`python scripts/run_live.py` をまだ実行していません")
         return
@@ -240,11 +251,12 @@ def render_live_state():
 
     eq_history = state.get("equity_curve", [])
     current_eq = eq_history[-1][1] if eq_history else state["cash"]
-    initial = state["initial_capital"]
+    # 積立入金がある場合は投下資本合計を基準にリターンを表示 (入金を利益と混同しない)
+    invested = state["initial_capital"] + state.get("total_deposits", 0.0)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("現在評価額", f"{current_eq:,.0f} 円",
-              f"{(current_eq - initial) / initial * 100:+.2f}%")
+              f"{(current_eq - invested) / invested * 100:+.2f}%")
     c2.metric("現金残", f"{state['cash']:,.0f} 円")
     c3.metric("保有銘柄数", len(state["positions"]))
     c4.metric("総取引数", len(state["trades"]))

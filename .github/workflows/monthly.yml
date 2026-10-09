@@ -1,0 +1,50 @@
+name: 月次成績レポート (毎月1日に前月分を自動生成)
+
+on:
+  schedule:
+    - cron: "19 8 1 * *"   # 毎月1日 17:19 JST (日次実行の後)
+  workflow_dispatch:
+    inputs:
+      month:
+        description: "対象月 YYYY-MM (省略時は前月)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monthly-report
+  cancel-in-progress: false
+
+jobs:
+  monthly-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 依存をインストール
+        run: pip install -r requirements.txt
+
+      - name: 月次レポートを生成
+        run: |
+          python scripts/run_monthly_report.py ${{ github.event.inputs.month && format('--month {0} --force', github.event.inputs.month) || '' }}
+
+      - name: 結果をコミット&プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f results/monthly 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "変更なし。コミットをスキップ。"
+          else
+            git commit -m "chore(auto): 月次成績レポートを生成 [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

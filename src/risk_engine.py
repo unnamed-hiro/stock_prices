@@ -87,15 +87,16 @@ def size_position(
     risk,
     base_equity: float | None = None,
     atr_value: float | None = None,
+    lot_size: int = 100,
 ) -> int:
-    """1ポジションの株数を決める (100株単元)。
+    """1ポジションの株数を決める (lot_size 単位: 100=単元株, 1=単元未満株)。
 
     sizing_mode="volatility": 想定損失 (ATR×倍率×株数) が資産の
     risk_per_trade_pct になる株数。position_size_pct は上限キャップとして残る。
     ATR が無い銘柄は fixed にフォールバック。
     sizing_mode="fixed" (旧来): 資産の position_size_pct を投入。
     """
-    if price <= 0:
+    if price <= 0 or lot_size <= 0:
         return 0
     base = base_equity if base_equity is not None else initial_capital
     cap_yen = base * risk.position_size_pct  # 1銘柄への投入上限
@@ -111,6 +112,6 @@ def size_position(
         target_yen = cap_yen
 
     budget = min(target_yen, available)
-    if budget <= 0 or price * 100 > budget:
+    if budget <= 0 or price * lot_size > budget:
         return 0
-    return int(budget // (price * 100)) * 100
+    return int(budget // (price * lot_size)) * lot_size

@@ -13,6 +13,11 @@ class SimulationConfig:
     benchmark: str
     # 約定タイミング: "next_open"(既定/現実的)=翌営業日始値, "close"(旧来/先読みあり)=当日終値
     execution: str = "next_open"
+    # 売買単位: 100=通常の単元株 / 1=単元未満株(S株・かぶミニ等)。少額資金は1を推奨
+    # (単元未満株は実質スプレッドが広い: slippage_rate を 0.002〜0.005 に上げて現実化すること)
+    lot_size: int = 100
+    # 毎月の積立入金額(円)。0=無効。毎月最初の営業日に入金される
+    monthly_deposit: float = 0.0
 
 
 @dataclass

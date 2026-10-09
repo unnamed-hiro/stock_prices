@@ -36,11 +36,23 @@ def compute_metrics(pf: Portfolio) -> Metrics:
         return Metrics(pf.initial_capital, pf.initial_capital, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0)
 
     final = float(eq.iloc[-1])
-    total_ret = final / pf.initial_capital - 1
+    # 積立入金がある場合は投下資本合計を基準にする (入金による残高増を利益と混同しない)。
+    # 入金時期は加重しない単純計算 — 途中入金ほど実際のリターンは出にくいため保守的。
+    invested = pf.initial_capital + getattr(pf, "total_deposits", 0.0)
+    total_ret = (final - invested) / invested
     days = max((eq.index[-1] - eq.index[0]).days, 1)
-    annual_ret = (final / pf.initial_capital) ** (365 / days) - 1
+    annual_ret = (1 + total_ret) ** (365 / days) - 1 if total_ret > -1 else -1.0
 
     daily_ret = eq.pct_change().dropna()
+    # 入金日の評価額ジャンプは運用成績ではないので日次リターンから除去する
+    dep_log = getattr(pf, "deposit_log", [])
+    if dep_log:
+        dep = pd.Series(dtype=float)
+        for d, a in dep_log:
+            d = pd.Timestamp(d)
+            dep[d] = dep.get(d, 0.0) + a
+        adj = (eq.diff() - dep.reindex(eq.index).fillna(0.0)) / eq.shift(1)
+        daily_ret = adj.dropna()
     sharpe = float(daily_ret.mean() / daily_ret.std() * np.sqrt(252)) if daily_ret.std() > 0 else 0.0
 
     cummax = eq.cummax()
