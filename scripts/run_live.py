@@ -68,6 +68,17 @@ def main():
     price_data = fetch_many(tickers, start, end, use_cache=True)
     print(f"取得成功: {len(price_data)} / {len(tickers)}")
 
+    # 銘柄ヘルス記録: 連続失敗銘柄 (上場廃止等) を自動検出して次回から除外
+    if not args.dry_run:
+        try:
+            from src.universe_health import record_fetch_results, EXCLUDE_AFTER
+            newly = record_fetch_results(tickers, set(price_data.keys()),
+                                         date=str(target.date()))
+            if newly:
+                print(f"[universe] 連続{EXCLUDE_AFTER}回取得失敗 → 次回から除外: {', '.join(newly)}")
+        except Exception as e:
+            print(f"[warn] 銘柄ヘルス記録に失敗 (運用は継続): {e}")
+
     if not price_data:
         print("[error] 価格データが1件も取得できませんでした (ネットワーク/銘柄リスト要確認)")
         sys.exit(1)
