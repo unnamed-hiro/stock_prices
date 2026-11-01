@@ -1,0 +1,22 @@
+{
+  "month": "2026-10",
+  "equity_start": 5383062.3618524885,
+  "equity_end": 5314850.732995591,
+  "deposits_in_month": 0,
+  "profit": -68211.62885689735,
+  "month_return_pct": -1.2671528634014095,
+  "cumulative_return_pct": 6.297014659911823,
+  "invested_capital": 5000000.0,
+  "benchmark_pct": null,
+  "alpha_pct": null,
+  "n_closed": 3,
+  "win_rate_pct": 100.0,
+  "avg_win": 16063.91780000004,
+  "avg_loss": 0.0,
+  "payoff_ratio": null,
+  "n_buys": 5,
+  "n_sell_execs": 3,
+  "risk_off_days": 0,
+  "earnings_skips": 28,
+  "trading_days": 21
+}
