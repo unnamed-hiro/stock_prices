@@ -1,0 +1,91 @@
+{
+  "date": "2026-11-02",
+  "strategy": "ensemble",
+  "starting_equity": 5294900.732995591,
+  "ending_equity": 5294900.732995591,
+  "cash": 558940.7247558454,
+  "n_positions": 20,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "9501.T",
+      "reason": "売り注文: 当日始値なし/保有なし"
+    },
+    {
+      "ticker": "9790.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9503.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "1803.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9101.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "4183.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9928.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "1812.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "2270.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "2587.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "7751.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9041.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9005.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "9104.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "4641.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "7269.T",
+      "reason": "max_positions上限"
+    },
+    {
+      "ticker": "2432.T",
+      "reason": "max_positions上限"
+    }
+  ],
+  "planned_orders": [
+    {
+      "side": "sell",
+      "ticker": "9501.T",
+      "kind": "risk",
+      "reason": "stop_loss (-12.4%)"
+    }
+  ],
+  "regime": "risk_on"
+}
