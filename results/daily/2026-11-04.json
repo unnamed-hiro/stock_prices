@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-04",
+  "strategy": "ensemble",
+  "starting_equity": 5326700.722314439,
+  "ending_equity": 5326700.722314439,
+  "cash": 558940.7247558454,
+  "n_positions": 20,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "9501.T",
+      "reason": "売り注文: 当日始値なし/保有なし"
+    }
+  ],
+  "planned_orders": [
+    {
+      "side": "sell",
+      "ticker": "9501.T",
+      "kind": "risk",
+      "reason": "stop_loss (-13.9%)"
+    }
+  ],
+  "regime": "risk_on"
+}
