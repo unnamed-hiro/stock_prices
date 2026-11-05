@@ -1,11 +1,17 @@
 {
-  "decided_on": "2026-11-04",
+  "decided_on": "2026-11-05",
   "orders": [
+    {
+      "side": "sell",
+      "ticker": "6803.T",
+      "kind": "risk",
+      "reason": "stop_loss (-9.4%)"
+    },
     {
       "side": "sell",
       "ticker": "9501.T",
       "kind": "risk",
-      "reason": "stop_loss (-13.9%)"
+      "reason": "stop_loss (-15.9%)"
     }
   ]
 }
