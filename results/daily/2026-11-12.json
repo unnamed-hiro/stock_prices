@@ -1,0 +1,124 @@
+{
+  "date": "2026-11-12",
+  "strategy": "ensemble",
+  "starting_equity": 5285017.798759263,
+  "ending_equity": 5285017.798759263,
+  "cash": 1134537.8015058453,
+  "n_positions": 16,
+  "exits": [],
+  "ai_signals": [],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "9005.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "3289.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "5233.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "2432.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "2153.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "7267.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "4528.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8570.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8725.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "3349.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9001.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "4507.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "1928.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "7459.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "4901.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "6902.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "5947.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "2168.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8830.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "3148.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8801.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "8572.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "1803.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9045.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "3231.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "4641.T",
+      "reason": "買い注文: 当日始値なし"
+    },
+    {
+      "ticker": "9042.T",
+      "reason": "買い注文: 当日始値なし"
+    }
+  ],
+  "planned_orders": [],
+  "regime": "risk_on"
+}
