@@ -1,11 +1,4 @@
 {
-  "decided_on": "2026-11-18",
-  "orders": [
-    {
-      "side": "sell",
-      "ticker": "5020.T",
-      "kind": "risk",
-      "reason": "stop_loss (-8.9%)"
-    }
-  ]
+  "decided_on": "2026-11-19",
+  "orders": []
 }
