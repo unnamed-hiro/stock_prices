@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-24",
+  "strategy": "ensemble",
+  "starting_equity": 5245207.801200669,
+  "ending_equity": 5245207.801200669,
+  "cash": 1134537.8015058453,
+  "n_positions": 16,
+  "exits": [],
+  "ai_signals": [
+    {
+      "ticker": "9508.T",
+      "action": "sell",
+      "confidence": 0.2333333333333333,
+      "reason": "合議sell 1/3 [technical:sell(0.70)]"
+    }
+  ],
+  "executed_buys": [],
+  "executed_sells": [],
+  "skipped": [
+    {
+      "ticker": "5020.T",
+      "reason": "売り注文: 当日始値なし/保有なし"
+    }
+  ],
+  "planned_orders": [
+    {
+      "side": "sell",
+      "ticker": "5020.T",
+      "kind": "risk",
+      "reason": "stop_loss (-12.8%)"
+    }
+  ],
+  "regime": "risk_off"
+}
